@@ -2,6 +2,14 @@
 
 Aplicación web responsive para una quiniela privada de hasta 20 amigos. Cada jugador inicia sesión, predice una única vez el resultado de cada partido antes de su inicio y consulta posiciones e historial. El administrador gestiona usuarios, partidos, resultados e importaciones JSON.
 
+El dashboard incluye:
+
+- Tabla general y tablas por fase: grupos, 16º, 8º, 4º, semifinales y final.
+- Estadísticas personales de aciertos, exactos y mejor jornada.
+- Podio Top 3 y reconocimiento **El pasto del grupo** para el último puesto.
+- Imagen PNG del ranking para compartir por WhatsApp.
+- Predicción única e irreversible del campeón antes del inicio del torneo.
+
 ## Requisitos
 
 - Node.js 20 o superior

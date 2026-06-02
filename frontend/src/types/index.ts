@@ -8,4 +8,6 @@ export type Match = {
   myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[];
 };
 export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number };
-export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; pendingMatches: number };
+export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
+export type ChampionPrediction = { id: number; team: string; createdAt: string };
+export type ChampionPredictionState = { prediction: ChampionPrediction | null; teams: string[]; closesAt: string; canPredict: boolean };

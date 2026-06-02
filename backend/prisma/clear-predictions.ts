@@ -3,8 +3,12 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const result = await prisma.prediction.deleteMany();
-  console.log(`Predicciones eliminadas: ${result.count}`);
+  const [predictions, championPredictions] = await prisma.$transaction([
+    prisma.prediction.deleteMany(),
+    prisma.championPrediction.deleteMany()
+  ]);
+  console.log(`Predicciones eliminadas: ${predictions.count}`);
+  console.log(`Predicciones de campeón eliminadas: ${championPredictions.count}`);
 }
 
 main()
