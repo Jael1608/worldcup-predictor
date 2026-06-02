@@ -23,11 +23,14 @@ La API queda disponible en `http://localhost:3001/api`.
 Variables de entorno:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@POOLER_HOST/neondb?sslmode=require"
+DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST/neondb?sslmode=require"
 JWT_SECRET="change-this-secret"
 PORT=3001
 FRONTEND_URL="http://localhost:5173"
 ```
+
+El proyecto utiliza PostgreSQL. Para desarrollo puedes usar una base local o una rama de Neon.
 
 Comandos Prisma útiles:
 
@@ -49,14 +52,33 @@ npm run dev
 
 La interfaz queda disponible en `http://localhost:5173`.
 
-## Publicar En Render
+## Publicar Gratis Con Neon Y Render
 
-La aplicación puede publicarse con un repositorio de GitHub y dos servicios de Render:
+La aplicación puede publicarse sin disco persistente y sin costo inicial:
 
+- Una base de datos PostgreSQL gratuita en **Neon**.
 - Un **Web Service** para `backend`.
 - Un **Static Site** para `frontend`.
 
-Antes de comenzar, sube el proyecto a GitHub:
+### Base De Datos Neon
+
+1. Crea una cuenta en [Neon](https://console.neon.tech).
+2. Crea un proyecto PostgreSQL.
+3. En el panel de Neon, abre **Connect**.
+4. Copia la URL pooled para la aplicación y la URL directa para migraciones.
+
+Las variables tienen esta forma:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@POOLER_HOST/neondb?sslmode=require
+DIRECT_URL=postgresql://USER:PASSWORD@DIRECT_HOST/neondb?sslmode=require
+```
+
+Normalmente la URL pooled contiene `-pooler` en el hostname. La URL directa no lo contiene.
+
+### Subir A GitHub
+
+Sube el proyecto:
 
 ```bash
 cd worldcup-predictor
@@ -68,7 +90,7 @@ git remote add origin https://github.com/TU_USUARIO/worldcup-predictor.git
 git push -u origin main
 ```
 
-### Backend
+### Backend Render
 
 En Render crea un **Web Service** conectado al repositorio:
 
@@ -79,23 +101,25 @@ En Render crea un **Web Service** conectado al repositorio:
 | Start Command | `npx prisma migrate deploy && npm start` |
 | Health Check Path | `/api/health` |
 
-No agregues `npx prisma migrate deploy` al build command: el disco persistente se monta al iniciar el servicio, no durante la compilación.
-
 Variables de entorno:
 
 ```env
-DATABASE_URL=file:/var/data/worldcup.db
+DATABASE_URL=postgresql://USER:PASSWORD@POOLER_HOST/neondb?sslmode=require
+DIRECT_URL=postgresql://USER:PASSWORD@DIRECT_HOST/neondb?sslmode=require
 JWT_SECRET=una-clave-larga-y-privada
 FRONTEND_URL=https://TU-FRONTEND.onrender.com
 ```
 
-Adjunta un disco persistente al Web Service con mount path `/var/data`. SQLite guarda toda la información en ese disco. Cuando el backend termine de publicar por primera vez, abre su **Shell** en Render y ejecuta una sola vez:
+No agregues un disco persistente: PostgreSQL se almacena en Neon. Cuando el backend termine de publicar por primera vez, carga usuarios y fixture desde tu computadora:
 
 ```bash
+cd backend
 npm run prisma:seed
 ```
 
-### Frontend
+El comando usa el `DATABASE_URL` configurado en tu archivo `.env` local. Antes de ejecutarlo, reemplaza las URLs de ejemplo por las URLs reales de Neon.
+
+### Frontend Render
 
 En Render crea un **Static Site** conectado al mismo repositorio:
 
