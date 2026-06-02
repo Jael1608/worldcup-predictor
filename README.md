@@ -151,6 +151,12 @@ Desde la carpeta `backend`, elimina solamente las predicciones y conserva usuari
 npm run db:clear-predictions
 ```
 
+Para borrar apuestas y resultados oficiales, conservando usuarios y los 104 partidos:
+
+```bash
+npm run db:clear-results-and-predictions
+```
+
 Para restaurar completamente el entorno de pruebas, eliminando predicciones, partidos y usuarios creados manualmente:
 
 ```bash

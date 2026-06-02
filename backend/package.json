@@ -13,6 +13,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "db:clear-predictions": "tsx prisma/clear-predictions.ts",
+    "db:clear-results-and-predictions": "tsx prisma/clear-results-and-predictions.ts",
     "db:reset-test-data": "prisma db seed"
   },
   "prisma": {
