@@ -1,0 +1,10 @@
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { AuthProvider } from "./context/AuthContext";
+import { AdminPage } from "./pages/AdminPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { HistoryPage } from "./pages/HistoryPage";
+import { LoginPage } from "./pages/LoginPage";
+import { MatchesPage } from "./pages/MatchesPage";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
+export const App = () => <AuthProvider><BrowserRouter><Routes><Route path="/login" element={<LoginPage/>}/><Route element={<ProtectedRoute/>}><Route element={<Layout/>}><Route index element={<DashboardPage/>}/><Route path="matches" element={<MatchesPage/>}/><Route path="history" element={<HistoryPage/>}/><Route element={<ProtectedRoute admin/>}><Route path="admin" element={<AdminPage/>}/></Route></Route></Route></Routes></BrowserRouter></AuthProvider>;

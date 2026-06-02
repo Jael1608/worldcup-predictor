@@ -1,0 +1,10 @@
+import { Router } from "express";
+import * as controller from "../controllers/matches.controller";
+import { adminMiddleware } from "../middlewares/admin.middleware";
+export const matchesRoutes = Router();
+matchesRoutes.get("/", controller.list);
+matchesRoutes.get("/:id", controller.get);
+matchesRoutes.post("/", adminMiddleware, controller.create);
+matchesRoutes.patch("/:id", adminMiddleware, controller.update);
+matchesRoutes.patch("/:id/result", adminMiddleware, controller.result);
+matchesRoutes.delete("/:id", adminMiddleware, controller.remove);

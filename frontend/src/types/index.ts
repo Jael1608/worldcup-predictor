@@ -1,0 +1,11 @@
+export type Role = "ADMIN" | "PLAYER";
+export type Stage = "GROUP" | "ROUND_OF_32" | "ROUND_OF_16" | "QUARTER_FINAL" | "SEMI_FINAL" | "THIRD_PLACE" | "FINAL";
+export type User = { id: number; name: string; username: string; role: Role };
+export type Prediction = { id: number; predictedHome: number; predictedAway: number; points: number; user?: Pick<User, "id" | "name" | "username"> };
+export type Match = {
+  id: number; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null;
+  matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
+  myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[];
+};
+export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number };
+export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; pendingMatches: number };

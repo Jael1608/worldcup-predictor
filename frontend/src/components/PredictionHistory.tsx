@@ -1,0 +1,5 @@
+import { Match } from "../types";
+export const PredictionHistory = ({ match }: { match: Match }) => <article className="panel">
+  <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="font-black">{match.homeTeam} <span className="text-slate-500">vs</span> {match.awayTeam}</h3><p className="text-xs text-slate-400">{new Date(match.matchDate).toLocaleString()}</p></div>{match.status === "FINISHED" && <p className="rounded-xl bg-green-500/10 px-3 py-2 font-black text-green-300">{match.homeScore} - {match.awayScore}</p>}</div>
+  <div className="mt-4 space-y-2">{match.predictions?.length ? match.predictions.map((prediction) => <div className="flex justify-between rounded-xl bg-[#16243a] p-3 text-sm" key={prediction.id}><span>{prediction.user?.name}</span><strong>{prediction.predictedHome} - {prediction.predictedAway}{match.status === "FINISHED" && ` · ${prediction.points} puntos`}</strong></div>) : <p className="text-sm text-slate-400">Todavía no hay predicciones.</p>}</div>
+</article>;

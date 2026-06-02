@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  username     String       @unique
+  passwordHash String
+  role         String       @default("PLAYER")
+  createdAt    DateTime     @default(now())
+  predictions  Prediction[]
+}
+
+model Match {
+  id          Int          @id @default(autoincrement())
+  externalId  String?      @unique
+  homeTeam    String
+  awayTeam    String
+  homeScore   Int?
+  awayScore   Int?
+  matchDate   DateTime
+  stage       String
+  groupName   String?
+  status      String       @default("SCHEDULED")
+  venue       String?
+  source      String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  predictions Prediction[]
+}
+
+model Prediction {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  matchId       Int
+  predictedHome Int
+  predictedAway Int
+  points        Int      @default(0)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match         Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+}
+
+model SystemConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}

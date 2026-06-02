@@ -1,0 +1,22 @@
+import cors from "cors";
+import express from "express";
+import { adminRoutes } from "./routes/admin.routes";
+import { authRoutes } from "./routes/auth.routes";
+import { dashboardRoutes } from "./routes/dashboard.routes";
+import { matchesRoutes } from "./routes/matches.routes";
+import { predictionsRoutes } from "./routes/predictions.routes";
+import { usersRoutes } from "./routes/users.routes";
+import { authMiddleware } from "./middlewares/auth.middleware";
+import { errorMiddleware } from "./middlewares/error.middleware";
+
+export const app = express();
+app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+app.use(express.json());
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.use("/api/auth", authRoutes);
+app.use("/api/users", authMiddleware, usersRoutes);
+app.use("/api/matches", authMiddleware, matchesRoutes);
+app.use("/api/predictions", authMiddleware, predictionsRoutes);
+app.use("/api/dashboard", authMiddleware, dashboardRoutes);
+app.use("/api/admin", authMiddleware, adminRoutes);
+app.use(errorMiddleware);
