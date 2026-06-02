@@ -79,6 +79,8 @@ En Render crea un **Web Service** conectado al repositorio:
 | Start Command | `npx prisma migrate deploy && npm start` |
 | Health Check Path | `/api/health` |
 
+No agregues `npx prisma migrate deploy` al build command: el disco persistente se monta al iniciar el servicio, no durante la compilación.
+
 Variables de entorno:
 
 ```env
