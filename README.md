@@ -145,6 +145,12 @@ Después de conocer la URL definitiva del frontend, confirma que `FRONTEND_URL` 
 
 ## Limpiar Datos De Prueba
 
+Para sincronizar los usuarios iniciales definidos en `backend/prisma/default-users.ts` y eliminar usuarios adicionales, configura primero las variables `DEFAULT_*_PASSWORD` en `backend/.env`:
+
+```bash
+npm run db:sync-default-users
+```
+
 Desde la carpeta `backend`, elimina solamente las predicciones y conserva usuarios y fixture:
 
 ```bash
@@ -169,10 +175,12 @@ El reinicio completo vuelve a crear `admin`, `joel`, `adan`, `dani` y los 104 pa
 
 | Rol | Usuario | Contraseña |
 | --- | --- | --- |
-| Administrador | `admin` | `admin123` |
-| Jugador | `joel` | `123456` |
-| Jugador | `adan` | `123456` |
-| Jugador | `dani` | `123456` |
+| Administrador | `admin` | Configurada en `backend/.env` |
+| Jugador | `joel` | Configurada en `backend/prisma/default-users.ts` |
+| Jugador | `adan` | Configurada en `backend/prisma/default-users.ts` |
+| Jugador | `dani` | Configurada en `backend/prisma/default-users.ts` |
+| Jugador | `arnaldo` | Configurada en `backend/prisma/default-users.ts` |
+| Jugador | `nelson` | Configurada en `backend/prisma/default-users.ts` |
 
 El seed crea los 104 partidos del fixture oficial FIFA actualizado el 10 de abril de 2026:
 
