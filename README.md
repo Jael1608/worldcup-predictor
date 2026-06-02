@@ -9,6 +9,7 @@ El dashboard incluye:
 - Podio Top 3 y reconocimiento **El pasto del grupo** para el último puesto.
 - Imagen PNG del ranking para compartir por WhatsApp.
 - Predicción única e irreversible del campeón antes del inicio del torneo.
+- Bonificación de 15 puntos en la tabla general para quienes acierten el campeón oficial cargado por el admin.
 
 ## Requisitos
 

@@ -1,12 +1,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import { AdminMatchForm } from "../components/AdminMatchForm";
-import { Match } from "../types";
+import { Match, OfficialChampionState } from "../types";
 const sample = `{"matches":[{"externalId":"match-001","homeTeam":"Alemania","awayTeam":"Curazao","matchDate":"2026-06-15T18:00:00.000Z","stage":"GROUP","groupName":"Grupo A"}]}`;
 export const AdminPage = () => {
   const [matches, setMatches] = useState<Match[]>([]); const [message, setMessage] = useState(""); const [json, setJson] = useState(sample);
+  const [officialChampion, setOfficialChampion] = useState<OfficialChampionState>(); const [championTeam, setChampionTeam] = useState("");
   const [user, setUser] = useState({ name: "", username: "", password: "", role: "PLAYER" }); const [result, setResult] = useState({ matchId: "", homeScore: "", awayScore: "" });
-  const load = () => api.get<Match[]>("/matches").then(({ data }) => setMatches(data)); useEffect(() => { void load(); }, []);
+  const load = () => api.get<Match[]>("/matches").then(({ data }) => setMatches(data));
+  const loadChampion = () => api.get<OfficialChampionState>("/admin/official-champion").then(({ data }) => { setOfficialChampion(data); setChampionTeam(data.team ?? ""); });
+  useEffect(() => { void load(); void loadChampion(); }, []);
   const run = async (action: () => Promise<unknown>, success: string) => { setMessage(""); try { await action(); setMessage(success); load(); } catch (e) { setMessage(errorMessage(e)); } };
   const createUser = (e: FormEvent) => { e.preventDefault(); run(() => api.post("/users", user), "Usuario creado"); };
   const saveResult = (e: FormEvent) => { e.preventDefault(); run(() => api.patch(`/matches/${result.matchId}/result`, { homeScore: Number(result.homeScore), awayScore: Number(result.awayScore) }), "Resultado guardado y puntos recalculados"); };
@@ -15,6 +18,7 @@ export const AdminPage = () => {
     <div className="panel"><h2 className="mb-4 text-lg font-black">Crear partido</h2><AdminMatchForm onCreated={load}/></div>
     <div className="panel"><h2 className="mb-4 text-lg font-black">Cargar resultado oficial</h2><form className="grid gap-3" onSubmit={saveResult}><select required value={result.matchId} onChange={(e) => setResult({ ...result, matchId: e.target.value })}><option value="">Seleccionar partido</option>{matches.map((match) => <option key={match.id} value={match.id}>{match.homeTeam} vs {match.awayTeam}</option>)}</select><div className="grid grid-cols-2 gap-3"><input required min="0" type="number" placeholder="Goles local" value={result.homeScore} onChange={(e) => setResult({ ...result, homeScore: e.target.value })}/><input required min="0" type="number" placeholder="Goles visitante" value={result.awayScore} onChange={(e) => setResult({ ...result, awayScore: e.target.value })}/></div><button className="button-primary">Guardar resultado</button></form></div>
     <div className="panel"><h2 className="mb-4 text-lg font-black">Importar partidos por JSON</h2><textarea className="min-h-40 w-full font-mono text-xs" value={json} onChange={(e) => setJson(e.target.value)}/><button className="button-primary mt-3 w-full" onClick={() => run(() => api.post("/admin/import-matches-json", JSON.parse(json)), "Importación completada")}>Importar JSON</button></div>
+    <div className="panel lg:col-span-2"><h2 className="text-lg font-black">Campeón oficial</h2><p className="my-2 text-sm text-slate-400">Al guardar el campeón, cada jugador que lo predijo recibe automáticamente {officialChampion?.bonusPoints ?? 15} puntos en la tabla general.</p><div className="flex flex-col gap-3 sm:flex-row"><select className="min-w-0 flex-1" value={championTeam} onChange={(e) => setChampionTeam(e.target.value)}><option value="">Seleccionar selección</option>{officialChampion?.teams.map((team) => <option key={team}>{team}</option>)}</select><button className="button-primary" disabled={!championTeam} onClick={() => run(async () => { await api.put("/admin/official-champion", { team: championTeam }); await loadChampion(); }, "Campeón oficial guardado")}>Guardar campeón</button><button className="button-secondary" disabled={!officialChampion?.team} onClick={() => run(async () => { await api.delete("/admin/official-champion"); await loadChampion(); }, "Campeón oficial eliminado")}>Limpiar</button></div></div>
     <div className="panel lg:col-span-2"><h2 className="text-lg font-black">Mantenimiento</h2><p className="my-2 text-sm text-slate-400">Restaura el fixture oficial versionado o actualiza los puntos de los partidos finalizados.</p><div className="flex flex-wrap gap-2"><button className="button-secondary" onClick={() => run(() => api.post("/admin/import-matches"), "Fixture oficial importado")}>Importar fixture oficial</button><button className="button-secondary" onClick={() => run(() => api.post("/admin/recalculate-points"), "Puntos recalculados")}>Recalcular puntos</button></div></div>
   </section></>;
 };

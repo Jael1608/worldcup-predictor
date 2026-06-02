@@ -7,7 +7,8 @@ export type Match = {
   matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
   myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[];
 };
-export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number };
-export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
+export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number; championBonus: number };
+export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; championBonus: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
 export type ChampionPrediction = { id: number; team: string; createdAt: string };
 export type ChampionPredictionState = { prediction: ChampionPrediction | null; teams: string[]; closesAt: string; canPredict: boolean };
+export type OfficialChampionState = { team: string | null; bonusPoints: number; teams: string[] };

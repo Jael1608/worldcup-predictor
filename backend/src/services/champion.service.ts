@@ -8,6 +8,8 @@ export const tournamentTeams = [...new Set(
     .filter((match) => match.stage === "GROUP")
     .flatMap((match) => [match.homeTeam, match.awayTeam])
 )].sort((a, b) => a.localeCompare(b));
+export const CHAMPION_BONUS_POINTS = 15;
+const officialChampionKey = "officialChampion";
 
 const getTournamentStart = async () => {
   const openingMatch = await prisma.match.findFirst({ orderBy: { matchDate: "asc" }, select: { matchDate: true } });
@@ -35,4 +37,24 @@ export const createChampionPrediction = async (userId: number, team: unknown) =>
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new AppError(409, "Ya guardaste tu predicción del campeón");
     throw error;
   }
+};
+
+export const getOfficialChampion = async () => {
+  const config = await prisma.systemConfig.findUnique({ where: { key: officialChampionKey } });
+  return { team: config?.value ?? null, bonusPoints: CHAMPION_BONUS_POINTS, teams: tournamentTeams };
+};
+
+export const saveOfficialChampion = async (team: unknown) => {
+  if (typeof team !== "string" || !tournamentTeams.includes(team)) throw new AppError(400, "Selección inválida");
+  await prisma.systemConfig.upsert({
+    where: { key: officialChampionKey },
+    create: { key: officialChampionKey, value: team },
+    update: { value: team }
+  });
+  return getOfficialChampion();
+};
+
+export const clearOfficialChampion = async () => {
+  await prisma.systemConfig.deleteMany({ where: { key: officialChampionKey } });
+  return getOfficialChampion();
 };

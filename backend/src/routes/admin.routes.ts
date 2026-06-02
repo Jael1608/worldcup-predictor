@@ -6,3 +6,6 @@ adminRoutes.use(adminMiddleware);
 adminRoutes.post("/import-matches", controller.importMatches);
 adminRoutes.post("/import-matches-json", controller.importJson);
 adminRoutes.post("/recalculate-points", controller.recalculate);
+adminRoutes.get("/official-champion", controller.officialChampion);
+adminRoutes.put("/official-champion", controller.saveChampion);
+adminRoutes.delete("/official-champion", controller.clearChampion);
