@@ -13,6 +13,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "db:sync-default-users": "tsx prisma/sync-default-users.ts",
+    "db:normalize-team-names": "tsx prisma/normalize-team-names.ts",
     "db:clear-predictions": "tsx prisma/clear-predictions.ts",
     "db:clear-results-and-predictions": "tsx prisma/clear-results-and-predictions.ts",
     "db:reset-test-data": "prisma db seed"
