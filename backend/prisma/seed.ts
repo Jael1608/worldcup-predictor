@@ -7,6 +7,8 @@ const prisma = new PrismaClient();
 
 async function main() {
   await prisma.prediction.deleteMany();
+  await prisma.championPrediction.deleteMany();
+  await prisma.systemConfig.deleteMany({ where: { key: "officialChampion" } });
   await prisma.match.deleteMany();
   await prisma.user.deleteMany();
   await Promise.all(defaultUsers.map(async (user) => prisma.user.create({

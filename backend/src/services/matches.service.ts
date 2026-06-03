@@ -28,6 +28,9 @@ const dateOf = (value: unknown) => {
   if (Number.isNaN(date.getTime())) throw new AppError(400, "Fecha inválida");
   return date;
 };
+const ensureDifferentTeams = (homeTeam: string, awayTeam: string) => {
+  if (homeTeam.localeCompare(awayTeam, undefined, { sensitivity: "accent" }) === 0) throw new AppError(400, "Los equipos deben ser diferentes");
+};
 export const hasDefinedTeams = (homeTeam: string, awayTeam: string) => ![homeTeam, awayTeam].some((team) => /^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(team));
 
 export const listMatches = async (userId: number) => {
@@ -46,10 +49,13 @@ export const getMatch = async (id: number, userId: number) => {
   return { ...rest, myPrediction: predictions[0] ?? null, canPredict: predictions.length === 0 && match.status === "SCHEDULED" && match.matchDate > new Date() && hasDefinedTeams(match.homeTeam, match.awayTeam) };
 };
 
-export const createMatch = (body: Record<string, unknown>) => prisma.match.create({
-  data: {
-    homeTeam: requiredString(body.homeTeam, "Equipo local"),
-    awayTeam: requiredString(body.awayTeam, "Equipo visitante"),
+export const createMatch = async (body: Record<string, unknown>) => {
+  const homeTeam = requiredString(body.homeTeam, "Equipo local");
+  const awayTeam = requiredString(body.awayTeam, "Equipo visitante");
+  ensureDifferentTeams(homeTeam, awayTeam);
+  try { return await prisma.match.create({ data: {
+    homeTeam,
+    awayTeam,
     matchDate: dateOf(body.matchDate),
     stage: stageOf(body.stage),
     groupName: optionalString(body.groupName),
@@ -57,10 +63,15 @@ export const createMatch = (body: Record<string, unknown>) => prisma.match.creat
     externalId: optionalString(body.externalId),
     source: optionalString(body.source) ?? "manual",
     status: body.status ? statusOf(body.status) : "SCHEDULED"
+  } }); } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new AppError(409, "Ya existe un partido con ese identificador externo");
+    throw error;
   }
-});
+};
 
 export const updateMatch = async (id: number, body: Record<string, unknown>) => {
+  const current = await prisma.match.findUnique({ where: { id } });
+  if (!current) throw new AppError(404, "Partido no encontrado");
   const data: Prisma.MatchUpdateInput = {};
   if (body.homeTeam !== undefined) data.homeTeam = requiredString(body.homeTeam, "Equipo local");
   if (body.awayTeam !== undefined) data.awayTeam = requiredString(body.awayTeam, "Equipo visitante");
@@ -68,7 +79,12 @@ export const updateMatch = async (id: number, body: Record<string, unknown>) => 
   if (body.stage !== undefined) data.stage = stageOf(body.stage);
   if (body.groupName !== undefined) data.groupName = optionalString(body.groupName);
   if (body.venue !== undefined) data.venue = optionalString(body.venue);
-  if (body.status !== undefined) data.status = statusOf(body.status);
+  if (body.status !== undefined) {
+    const status = statusOf(body.status);
+    if (status === "FINISHED") throw new AppError(400, "Usa la carga de resultado oficial para finalizar un partido");
+    data.status = status;
+  }
+  ensureDifferentTeams((data.homeTeam as string | undefined) ?? current.homeTeam, (data.awayTeam as string | undefined) ?? current.awayTeam);
   try { return await prisma.match.update({ where: { id }, data }); }
   catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new AppError(404, "Partido no encontrado");
@@ -80,7 +96,12 @@ export const saveResult = async (id: number, body: Record<string, unknown>) => {
   const homeScore = nonNegativeInteger(body.homeScore, "Goles local");
   const awayScore = nonNegativeInteger(body.awayScore, "Goles visitante");
   return prisma.$transaction(async (tx) => {
-    const match = await tx.match.update({ where: { id }, data: { homeScore, awayScore, status: "FINISHED" } }).catch(() => { throw new AppError(404, "Partido no encontrado"); });
+    let match;
+    try { match = await tx.match.update({ where: { id }, data: { homeScore, awayScore, status: "FINISHED" } }); }
+    catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new AppError(404, "Partido no encontrado");
+      throw error;
+    }
     const predictions = await tx.prediction.findMany({ where: { matchId: id } });
     await Promise.all(predictions.map((prediction) => tx.prediction.update({
       where: { id: prediction.id },

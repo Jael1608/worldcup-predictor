@@ -5,6 +5,7 @@ import { hashPassword } from "../utils/password";
 import { Role, roles } from "../types/domain";
 
 const publicSelect = { id: true, name: true, username: true, role: true, createdAt: true };
+const MAX_PLAYERS = 20;
 const roleOf = (value: unknown): Role => {
   if (!roles.includes(value as Role)) throw new AppError(400, "Rol inválido");
   return value as Role;
@@ -17,9 +18,11 @@ export const createUser = async (body: Record<string, unknown>) => {
   if (typeof name !== "string" || !name.trim() || typeof username !== "string" || !username.trim() || typeof password !== "string" || password.length < 6) {
     throw new AppError(400, "Nombre, usuario y contraseña de al menos 6 caracteres son obligatorios");
   }
+  const role = roleOf(body.role ?? "PLAYER");
+  if (role === "PLAYER" && await prisma.user.count({ where: { role: "PLAYER" } }) >= MAX_PLAYERS) throw new AppError(400, `No puedes superar el máximo de ${MAX_PLAYERS} jugadores`);
   try {
     return await prisma.user.create({
-      data: { name: name.trim(), username: username.trim().toLowerCase(), passwordHash: await hashPassword(password), role: roleOf(body.role ?? "PLAYER") },
+      data: { name: name.trim(), username: username.trim().toLowerCase(), passwordHash: await hashPassword(password), role },
       select: publicSelect
     });
   } catch (error) {
@@ -29,6 +32,8 @@ export const createUser = async (body: Record<string, unknown>) => {
 };
 
 export const updateUser = async (id: number, body: Record<string, unknown>) => {
+  const current = await prisma.user.findUnique({ where: { id } });
+  if (!current) throw new AppError(404, "Usuario no encontrado");
   const data: Prisma.UserUpdateInput = {};
   if (body.name !== undefined) {
     if (typeof body.name !== "string" || !body.name.trim()) throw new AppError(400, "Nombre inválido");
@@ -42,7 +47,11 @@ export const updateUser = async (id: number, body: Record<string, unknown>) => {
     if (typeof body.password !== "string" || body.password.length < 6) throw new AppError(400, "La contraseña debe tener al menos 6 caracteres");
     data.passwordHash = await hashPassword(body.password);
   }
-  if (body.role !== undefined) data.role = roleOf(body.role);
+  if (body.role !== undefined) {
+    const role = roleOf(body.role);
+    if (role === "PLAYER" && current.role !== "PLAYER" && await prisma.user.count({ where: { role: "PLAYER" } }) >= MAX_PLAYERS) throw new AppError(400, `No puedes superar el máximo de ${MAX_PLAYERS} jugadores`);
+    data.role = role;
+  }
   try {
     return await prisma.user.update({ where: { id }, data, select: publicSelect });
   } catch (error) {

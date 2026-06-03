@@ -12,7 +12,8 @@ export const CHAMPION_BONUS_POINTS = 15;
 const officialChampionKey = "officialChampion";
 
 const getTournamentStart = async () => {
-  const openingMatch = await prisma.match.findFirst({ orderBy: { matchDate: "asc" }, select: { matchDate: true } });
+  const openingMatch = await prisma.match.findUnique({ where: { externalId: "fwc26-001" }, select: { matchDate: true } })
+    ?? await prisma.match.findFirst({ orderBy: { matchDate: "asc" }, select: { matchDate: true } });
   if (!openingMatch) throw new AppError(400, "Todavía no hay partidos cargados");
   return openingMatch.matchDate;
 };

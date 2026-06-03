@@ -8,6 +8,11 @@ export type Standing = {
   userId: number; name: string; username: string; totalPoints: number;
   exactScores: number; winnerHits: number; predictionsCount: number; championBonus: number;
 };
+const fixtureDay = (date: Date) => {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+};
 
 export const getStandings = async (stage?: string): Promise<Standing[]> => {
   if (stage && !matchStages.includes(stage as MatchStage)) throw new AppError(400, "Fase inválida");
@@ -38,7 +43,7 @@ export const getMySummary = async (userId: number) => {
   });
   const hits = evaluated.filter((prediction) => prediction.points > 0).length;
   const dailyPoints = evaluated.reduce<Record<string, number>>((days, prediction) => {
-    const day = prediction.match.matchDate.toISOString().slice(0, 10);
+    const day = fixtureDay(prediction.match.matchDate);
     days[day] = (days[day] ?? 0) + prediction.points;
     return days;
   }, {});
@@ -57,7 +62,13 @@ export const getMySummary = async (userId: number) => {
   };
 };
 
-export const getHistory = () => prisma.match.findMany({
-  include: { predictions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { user: { name: "asc" } } } },
-  orderBy: { matchDate: "asc" }
-});
+export const getHistory = async () => {
+  const matches = await prisma.match.findMany({
+    include: { predictions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { user: { name: "asc" } } } },
+    orderBy: { matchDate: "asc" }
+  });
+  return matches.map((match) => {
+    const predictionsHidden = false;
+    return { ...match, predictions: predictionsHidden ? [] : match.predictions, predictionsHidden };
+  });
+};

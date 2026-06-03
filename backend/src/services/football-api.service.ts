@@ -10,7 +10,9 @@ const saveImported = async (matches: ImportedMatch[], source: string) => {
     const data = { homeTeam: match.homeTeam.trim(), awayTeam: match.awayTeam.trim(), matchDate: new Date(match.matchDate), stage: match.stage, groupName: match.groupName?.trim() || null, venue: match.venue?.trim() || null, source };
     if (match.externalId) {
       const existing = await prisma.match.findUnique({ where: { externalId: match.externalId } });
-      await prisma.match.upsert({ where: { externalId: match.externalId }, create: { ...data, externalId: match.externalId }, update: data });
+      const keepResolvedKnockoutTeams = source === "fifa-official-2026-04-10" && existing?.stage !== "GROUP" && existing && !/^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(existing.homeTeam) && !/^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(existing.awayTeam);
+      const update = keepResolvedKnockoutTeams ? { ...data, homeTeam: existing.homeTeam, awayTeam: existing.awayTeam } : data;
+      await prisma.match.upsert({ where: { externalId: match.externalId }, create: { ...data, externalId: match.externalId }, update });
       existing ? updated++ : created++;
     } else {
       await prisma.match.create({ data });

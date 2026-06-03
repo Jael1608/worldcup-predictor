@@ -5,7 +5,7 @@ export type Prediction = { id: number; predictedHome: number; predictedAway: num
 export type Match = {
   id: number; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null;
   matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
-  myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[];
+  myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[]; predictionsHidden?: boolean;
 };
 export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number; championBonus: number };
 export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; championBonus: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
