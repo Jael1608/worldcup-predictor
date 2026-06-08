@@ -16,16 +16,71 @@ export type ResultPreview = {
   currentScore: string | null;
 };
 
+const FOOTBALL_DATA_URL = "https://api.football-data.org/v4/competitions/WC/matches?season=2026";
+
 const teamAliases = new Map([
-  ["Türkiye", "Turquía"],
+  ["Algeria", "Argelia"],
+  ["Argentina", "Argentina"],
+  ["Australia", "Australia"],
+  ["Austria", "Austria"],
+  ["Belgium", "Bélgica"],
+  ["Bosnia and Herzegovina", "Bosnia y Herzegovina"],
+  ["Brazil", "Brasil"],
+  ["Cabo Verde", "Cabo Verde"],
+  ["Cape Verde", "Cabo Verde"],
+  ["Canada", "Canadá"],
+  ["Colombia", "Colombia"],
+  ["Costa de Marfil", "Costa de Marfil"],
   ["Côte d'Ivoire", "Costa de Marfil"],
+  ["Croatia", "Croacia"],
+  ["Curaçao", "Curazao"],
+  ["Curacao", "Curazao"],
+  ["Czech Republic", "República Checa"],
   ["Chequia", "República Checa"],
+  ["DR Congo", "RD del Congo"],
+  ["Democratic Republic of the Congo", "RD del Congo"],
+  ["Ecuador", "Ecuador"],
+  ["Egypt", "Egipto"],
+  ["England", "Inglaterra"],
+  ["France", "Francia"],
+  ["Germany", "Alemania"],
+  ["Ghana", "Ghana"],
+  ["Haiti", "Haití"],
+  ["Iran", "Irán"],
+  ["Iraq", "Irak"],
+  ["Japan", "Japón"],
+  ["Jordan", "Jordania"],
+  ["Korea Republic", "Corea del Sur"],
+  ["South Korea", "Corea del Sur"],
+  ["Mexico", "México"],
+  ["Morocco", "Marruecos"],
+  ["Netherlands", "Países Bajos"],
+  ["New Zealand", "Nueva Zelanda"],
+  ["Norway", "Noruega"],
+  ["Panama", "Panamá"],
+  ["Paraguay", "Paraguay"],
+  ["Portugal", "Portugal"],
+  ["Qatar", "Catar"],
+  ["Saudi Arabia", "Arabia Saudita"],
+  ["Scotland", "Escocia"],
+  ["Senegal", "Senegal"],
+  ["South Africa", "Sudáfrica"],
+  ["Spain", "España"],
+  ["Sweden", "Suecia"],
+  ["Switzerland", "Suiza"],
+  ["Tunisia", "Túnez"],
+  ["Turkey", "Turquía"],
+  ["Türkiye", "Turquía"],
   ["República de Corea", "Corea del Sur"],
-  ["Curaçao", "Curazao"]
+  ["United States", "Estados Unidos"],
+  ["USA", "Estados Unidos"],
+  ["Uruguay", "Uruguay"],
+  ["Uzbekistan", "Uzbekistán"],
+  ["Uzbekistán", "Uzbekistán"]
 ]);
 
 const normalized = (value: unknown) => {
-  const text = String(value ?? "").trim();
+  const text = String(value ?? "").replace(/\s+(FC|CF)$/i, "").trim();
   return (teamAliases.get(text) ?? text)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -64,8 +119,8 @@ const resultArray = (payload: unknown): RawResult[] => {
 };
 
 const normalizeExternalResult = (item: RawResult) => {
-  const homeTeam = String(pick(item, ["homeTeam", "home.name", "teams.home.name", "teamHome.name", "localTeam.name"]) ?? "").trim();
-  const awayTeam = String(pick(item, ["awayTeam", "away.name", "teams.away.name", "teamAway.name", "visitorTeam.name"]) ?? "").trim();
+  const homeTeam = String(pick(item, ["homeTeam", "homeTeam.name", "home.name", "teams.home.name", "teamHome.name", "localTeam.name"]) ?? "").trim();
+  const awayTeam = String(pick(item, ["awayTeam", "awayTeam.name", "away.name", "teams.away.name", "teamAway.name", "visitorTeam.name"]) ?? "").trim();
   const homeScore = scoreOf(pick(item, ["homeScore", "score.home", "goals.home", "score.fulltime.home", "score.fullTime.home"]));
   const awayScore = scoreOf(pick(item, ["awayScore", "score.away", "goals.away", "score.fulltime.away", "score.fullTime.away"]));
   const dateValue = pick(item, ["matchDate", "date", "fixture.date", "utcDate"]);
@@ -77,10 +132,15 @@ const normalizeExternalResult = (item: RawResult) => {
 };
 
 const fetchExternalResults = async () => {
-  if (!process.env.RESULTS_API_URL) throw new AppError(400, "RESULTS_API_URL no está configurado");
+  const url = process.env.RESULTS_API_URL || FOOTBALL_DATA_URL;
+  const isFootballData = url.includes("football-data.org");
+  if (isFootballData && !process.env.RESULTS_API_TOKEN) throw new AppError(400, "Configura RESULTS_API_TOKEN con tu token de football-data.org");
   const headers: Record<string, string> = {};
-  if (process.env.RESULTS_API_TOKEN) headers.Authorization = `Bearer ${process.env.RESULTS_API_TOKEN}`;
-  const response = await fetch(process.env.RESULTS_API_URL, { headers });
+  if (process.env.RESULTS_API_TOKEN) {
+    if (isFootballData) headers["X-Auth-Token"] = process.env.RESULTS_API_TOKEN;
+    else headers.Authorization = `Bearer ${process.env.RESULTS_API_TOKEN}`;
+  }
+  const response = await fetch(url, { headers });
   if (!response.ok) throw new AppError(502, `La API externa respondió ${response.status}`);
   const payload = await response.json();
   return resultArray(payload).map(normalizeExternalResult).filter((item): item is NonNullable<typeof item> => Boolean(item));

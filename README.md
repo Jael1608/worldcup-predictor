@@ -37,8 +37,8 @@ DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST/neondb?sslmode=require"
 JWT_SECRET="change-this-secret"
 PORT=3001
 FRONTEND_URL="http://localhost:5173"
-RESULTS_API_URL=""
-RESULTS_API_TOKEN=""
+RESULTS_API_URL="https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+RESULTS_API_TOKEN="token-de-football-data"
 ```
 
 El proyecto utiliza PostgreSQL. Para desarrollo puedes usar una base local o una rama de Neon.
@@ -239,6 +239,15 @@ Fuente oficial:
 
 ## Actualizar Resultados Desde API
 
+La API elegida para actualizar marcadores es **football-data.org**, usando el endpoint del Mundial:
+
+```env
+RESULTS_API_URL="https://api.football-data.org/v4/competitions/WC/matches?season=2026"
+RESULTS_API_TOKEN="token-de-football-data"
+```
+
+En Render, agrega `RESULTS_API_TOKEN` en las variables de entorno del backend. `RESULTS_API_URL` es opcional porque el backend ya usa ese endpoint por defecto, pero puedes dejarla cargada para que quede explícito.
+
 El panel admin incluye **Resultados desde API**:
 
 1. **Buscar resultados ahora** consulta `RESULTS_API_URL`.
@@ -246,14 +255,7 @@ El panel admin incluye **Resultados desde API**:
 3. El admin revisa la vista previa.
 4. **Confirmar seleccionados** guarda resultados, marca partidos como finalizados y recalcula puntos.
 
-Variables opcionales:
-
-```env
-RESULTS_API_URL="https://api.example.com/worldcup-2026/results"
-RESULTS_API_TOKEN="token-opcional"
-```
-
-El parser acepta arreglos JSON directos o contenedores `results`, `matches`, `response`, `data` o `fixtures`. Cada resultado debe incluir equipos, marcador y estado final. Ejemplo compatible:
+El parser también acepta otros proveedores si algún día cambias `RESULTS_API_URL`: arreglos JSON directos o contenedores `results`, `matches`, `response`, `data` o `fixtures`. Cada resultado debe incluir equipos, marcador y estado final. Ejemplo compatible:
 
 ```json
 {
