@@ -37,6 +37,8 @@ DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST/neondb?sslmode=require"
 JWT_SECRET="change-this-secret"
 PORT=3001
 FRONTEND_URL="http://localhost:5173"
+RESULTS_API_URL=""
+RESULTS_API_TOKEN=""
 ```
 
 El proyecto utiliza PostgreSQL. Para desarrollo puedes usar una base local o una rama de Neon.
@@ -234,3 +236,37 @@ Fuente oficial:
 
 - [FIFA World Cup 26 match schedule, 10 April 2026](https://digitalhub.fifa.com/asset/4b5d4417-3343-4732-9cdf-14b6662af407/FWC26-Match-Schedule_English.pdf)
 - [Página oficial de fixtures FIFA](https://www.fifa.com/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums)
+
+## Actualizar Resultados Desde API
+
+El panel admin incluye **Resultados desde API**:
+
+1. **Buscar resultados ahora** consulta `RESULTS_API_URL`.
+2. El sistema cruza partidos por `externalId` o por equipos y fecha.
+3. El admin revisa la vista previa.
+4. **Confirmar seleccionados** guarda resultados, marca partidos como finalizados y recalcula puntos.
+
+Variables opcionales:
+
+```env
+RESULTS_API_URL="https://api.example.com/worldcup-2026/results"
+RESULTS_API_TOKEN="token-opcional"
+```
+
+El parser acepta arreglos JSON directos o contenedores `results`, `matches`, `response`, `data` o `fixtures`. Cada resultado debe incluir equipos, marcador y estado final. Ejemplo compatible:
+
+```json
+{
+  "results": [
+    {
+      "externalId": "fwc26-001",
+      "homeTeam": "México",
+      "awayTeam": "Sudáfrica",
+      "homeScore": 2,
+      "awayScore": 1,
+      "status": "FINISHED",
+      "matchDate": "2026-06-11T19:00:00.000Z"
+    }
+  ]
+}
+```

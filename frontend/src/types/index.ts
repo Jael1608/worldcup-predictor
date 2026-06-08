@@ -12,3 +12,15 @@ export type Summary = { totalPoints: number; position: number; predictionsCount:
 export type ChampionPrediction = { id: number; team: string; createdAt: string };
 export type ChampionPredictionState = { prediction: ChampionPrediction | null; teams: string[]; closesAt: string; canPredict: boolean };
 export type OfficialChampionState = { team: string | null; bonusPoints: number; teams: string[] };
+export type ResultPreview = {
+  matchId: number;
+  externalId: string | null;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  matchDate: string;
+  alreadyLoaded: boolean;
+  currentScore: string | null;
+};
+export type ResultPreviewResponse = { fetchedAt: string; count: number; results: ResultPreview[] };

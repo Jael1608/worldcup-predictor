@@ -9,3 +9,5 @@ adminRoutes.post("/recalculate-points", controller.recalculate);
 adminRoutes.get("/official-champion", controller.officialChampion);
 adminRoutes.put("/official-champion", controller.saveChampion);
 adminRoutes.delete("/official-champion", controller.clearChampion);
+adminRoutes.get("/results-preview", controller.previewResults);
+adminRoutes.post("/results-apply", controller.applyResults);
