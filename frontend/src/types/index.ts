@@ -23,4 +23,4 @@ export type ResultPreview = {
   alreadyLoaded: boolean;
   currentScore: string | null;
 };
-export type ResultPreviewResponse = { fetchedAt: string; count: number; results: ResultPreview[] };
+export type ResultPreviewResponse = { fetchedAt: string; count: number; externalCount: number; unmatchedCount: number; results: ResultPreview[] };

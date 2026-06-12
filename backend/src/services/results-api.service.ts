@@ -16,6 +16,14 @@ export type ResultPreview = {
   currentScore: string | null;
 };
 
+export type ResultPreviewResponse = {
+  fetchedAt: Date;
+  count: number;
+  externalCount: number;
+  unmatchedCount: number;
+  results: ResultPreview[];
+};
+
 const FOOTBALL_DATA_URL = "https://api.football-data.org/v4/competitions/WC/matches?season=2026";
 
 const teamAliases = new Map([
@@ -140,13 +148,13 @@ const fetchExternalResults = async () => {
     if (isFootballData) headers["X-Auth-Token"] = process.env.RESULTS_API_TOKEN;
     else headers.Authorization = `Bearer ${process.env.RESULTS_API_TOKEN}`;
   }
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
   if (!response.ok) throw new AppError(502, `La API externa respondió ${response.status}`);
   const payload = await response.json();
   return resultArray(payload).map(normalizeExternalResult).filter((item): item is NonNullable<typeof item> => Boolean(item));
 };
 
-export const previewExternalResults = async () => {
+export const previewExternalResults = async (): Promise<ResultPreviewResponse> => {
   const [externalResults, matches] = await Promise.all([
     fetchExternalResults(),
     prisma.match.findMany({ orderBy: { matchDate: "asc" } })
@@ -175,7 +183,13 @@ export const previewExternalResults = async () => {
     });
   }
 
-  return { fetchedAt: new Date(), count: previews.length, results: previews };
+  return {
+    fetchedAt: new Date(),
+    count: previews.length,
+    externalCount: externalResults.length,
+    unmatchedCount: externalResults.length - previews.length,
+    results: previews
+  };
 };
 
 export const applyExternalResults = async (matchIds?: unknown) => {
