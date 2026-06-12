@@ -25,19 +25,31 @@ export const getChampionPrediction = async (userId: number) => {
     prediction,
     teams: tournamentTeams,
     closesAt,
-    canPredict: !prediction && closesAt > new Date()
+    canPredict: !prediction
   };
 };
 
 export const createChampionPrediction = async (userId: number, team: unknown) => {
   if (typeof team !== "string" || !tournamentTeams.includes(team)) throw new AppError(400, "Selección inválida");
-  if (await getTournamentStart() <= new Date()) throw new AppError(400, "La predicción del campeón ya cerró");
   try {
     return await prisma.championPrediction.create({ data: { userId, team } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new AppError(409, "Ya guardaste tu predicción del campeón");
     throw error;
   }
+};
+
+export const getChampionPredictions = async () => {
+  const predictions = await prisma.championPrediction.findMany({
+    include: { user: { select: { id: true, name: true, username: true } } },
+    orderBy: { createdAt: "asc" }
+  });
+  return predictions.map((prediction) => ({
+    id: prediction.id,
+    team: prediction.team,
+    createdAt: prediction.createdAt,
+    user: prediction.user
+  }));
 };
 
 export const getOfficialChampion = async () => {

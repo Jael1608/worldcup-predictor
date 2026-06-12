@@ -11,6 +11,7 @@ export type Standing = { userId: number; name: string; username: string; totalPo
 export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; championBonus: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
 export type ChampionPrediction = { id: number; team: string; createdAt: string };
 export type ChampionPredictionState = { prediction: ChampionPrediction | null; teams: string[]; closesAt: string; canPredict: boolean };
+export type ChampionPredictionWithUser = ChampionPrediction & { user: Pick<User, "id" | "name" | "username"> };
 export type OfficialChampionState = { team: string | null; bonusPoints: number; teams: string[] };
 export type ResultPreview = {
   matchId: number;

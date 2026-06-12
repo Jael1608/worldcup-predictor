@@ -14,4 +14,5 @@ export const byMatch = async (req: AuthRequest, res: Response, next: NextFunctio
   } catch (e) { next(e); }
 };
 export const champion = async (req: AuthRequest, res: Response, next: NextFunction) => { try { res.json(await championService.getChampionPrediction(req.user!.id)); } catch (e) { next(e); } };
+export const championList = async (_req: AuthRequest, res: Response, next: NextFunction) => { try { res.json(await championService.getChampionPredictions()); } catch (e) { next(e); } };
 export const createChampion = async (req: AuthRequest, res: Response, next: NextFunction) => { try { res.status(201).json(await championService.createChampionPrediction(req.user!.id, req.body.team)); } catch (e) { next(e); } };
