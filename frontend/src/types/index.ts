@@ -23,4 +23,12 @@ export type ResultPreview = {
   alreadyLoaded: boolean;
   currentScore: string | null;
 };
-export type ResultPreviewResponse = { fetchedAt: string; count: number; externalCount: number; unmatchedCount: number; results: ResultPreview[] };
+export type ResultPreviewResponse = {
+  fetchedAt: string;
+  count: number;
+  apiMatchCount: number;
+  externalCount: number;
+  unmatchedCount: number;
+  statusSummary: Record<string, number>;
+  results: ResultPreview[];
+};

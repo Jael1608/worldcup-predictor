@@ -19,11 +19,14 @@ export const AdminPage = () => {
     try {
       const { data } = await api.get<ResultPreviewResponse>("/admin/results-preview");
       setResultPreview(data.results); setSelectedResults(data.results.filter((item) => !item.alreadyLoaded).map((item) => item.matchId));
+      const statuses = Object.entries(data.statusSummary).map(([status, count]) => `${status}: ${count}`).join(", ");
       const detail = data.results.length
         ? `${data.results.length} resultados encontrados (${data.results.filter((item) => !item.alreadyLoaded).length} nuevos).`
         : data.externalCount
           ? `La API trajo ${data.externalCount} resultado(s) finalizado(s), pero no coincidieron con el fixture cargado.`
-          : "La API respondió bien, pero todavía no hay resultados finalizados disponibles.";
+          : data.apiMatchCount
+            ? `La API respondió con ${data.apiMatchCount} partido(s), pero ninguno figura como finalizado. Estados recibidos: ${statuses}.`
+            : "La API respondió bien, pero no devolvió partidos para este torneo.";
       setResultApiMessage(detail); setMessage(detail);
     } catch (e) { const detail = errorMessage(e); setResultApiMessage(detail); setMessage(detail); } finally { setSearchingResults(false); }
   };

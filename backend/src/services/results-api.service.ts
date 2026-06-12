@@ -19,8 +19,10 @@ export type ResultPreview = {
 export type ResultPreviewResponse = {
   fetchedAt: Date;
   count: number;
+  apiMatchCount: number;
   externalCount: number;
   unmatchedCount: number;
+  statusSummary: Record<string, number>;
   results: ResultPreview[];
 };
 
@@ -111,8 +113,10 @@ const scoreOf = (value: unknown) => {
   return Number.isInteger(score) && score >= 0 ? score : null;
 };
 
+const statusOf = (item: RawResult) => String(pick(item, ["status", "status.short", "fixture.status.short", "matchStatus", "state"]) ?? "SIN_ESTADO").toUpperCase();
+
 const isFinal = (item: RawResult) => {
-  const status = String(pick(item, ["status", "status.short", "fixture.status.short", "matchStatus", "state"]) ?? "").toUpperCase();
+  const status = statusOf(item);
   return ["FT", "AET", "PEN", "FINISHED", "FINAL", "FULL_TIME", "COMPLETED", "COMPLETE"].some((token) => status.includes(token));
 };
 
@@ -151,14 +155,22 @@ const fetchExternalResults = async () => {
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
   if (!response.ok) throw new AppError(502, `La API externa respondió ${response.status}`);
   const payload = await response.json();
-  return resultArray(payload).map(normalizeExternalResult).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const rawResults = resultArray(payload);
+  const statusSummary = rawResults.reduce<Record<string, number>>((summary, item) => {
+    const status = statusOf(item);
+    summary[status] = (summary[status] ?? 0) + 1;
+    return summary;
+  }, {});
+  const finalResults = rawResults.map(normalizeExternalResult).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  return { rawCount: rawResults.length, statusSummary, finalResults };
 };
 
 export const previewExternalResults = async (): Promise<ResultPreviewResponse> => {
-  const [externalResults, matches] = await Promise.all([
+  const [externalResponse, matches] = await Promise.all([
     fetchExternalResults(),
     prisma.match.findMany({ orderBy: { matchDate: "asc" } })
   ]);
+  const externalResults = externalResponse.finalResults;
 
   const previews: ResultPreview[] = [];
   for (const result of externalResults) {
@@ -186,8 +198,10 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
   return {
     fetchedAt: new Date(),
     count: previews.length,
+    apiMatchCount: externalResponse.rawCount,
     externalCount: externalResults.length,
     unmatchedCount: externalResults.length - previews.length,
+    statusSummary: externalResponse.statusSummary,
     results: previews
   };
 };
