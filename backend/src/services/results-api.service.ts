@@ -144,8 +144,8 @@ const resultArray = (payload: unknown): RawResult[] => {
 };
 
 const normalizeExternalResult = (item: RawResult) => {
-  const homeTeam = String(pick(item, ["homeTeam", "homeTeam.name", "home.name", "teams.home.name", "teamHome.name", "localTeam.name"]) ?? "").trim();
-  const awayTeam = String(pick(item, ["awayTeam", "awayTeam.name", "away.name", "teams.away.name", "teamAway.name", "visitorTeam.name"]) ?? "").trim();
+  const homeTeam = String(pick(item, ["homeTeam.name", "home.name", "teams.home.name", "teamHome.name", "localTeam.name", "homeTeam"]) ?? "").trim();
+  const awayTeam = String(pick(item, ["awayTeam.name", "away.name", "teams.away.name", "teamAway.name", "visitorTeam.name", "awayTeam"]) ?? "").trim();
   const homeScore = scoreOf(pick(item, ["homeScore", "score.home", "goals.home", "score.fulltime.home", "score.fullTime.home"]));
   const awayScore = scoreOf(pick(item, ["awayScore", "score.away", "goals.away", "score.fulltime.away", "score.fullTime.away"]));
   const dateValue = pick(item, ["matchDate", "date", "fixture.date", "utcDate"]);
