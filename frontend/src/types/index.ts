@@ -23,6 +23,14 @@ export type ResultPreview = {
   alreadyLoaded: boolean;
   currentScore: string | null;
 };
+export type UnmatchedResult = {
+  externalId?: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  matchDate: string | null;
+};
 export type ResultPreviewResponse = {
   fetchedAt: string;
   count: number;
@@ -30,5 +38,6 @@ export type ResultPreviewResponse = {
   externalCount: number;
   unmatchedCount: number;
   statusSummary: Record<string, number>;
+  unmatchedResults: UnmatchedResult[];
   results: ResultPreview[];
 };

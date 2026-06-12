@@ -16,6 +16,15 @@ export type ResultPreview = {
   currentScore: string | null;
 };
 
+export type UnmatchedResult = {
+  externalId: string | undefined;
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  matchDate: Date | null;
+};
+
 export type ResultPreviewResponse = {
   fetchedAt: Date;
   count: number;
@@ -23,6 +32,7 @@ export type ResultPreviewResponse = {
   externalCount: number;
   unmatchedCount: number;
   statusSummary: Record<string, number>;
+  unmatchedResults: UnmatchedResult[];
   results: ResultPreview[];
 };
 
@@ -45,6 +55,7 @@ const teamAliases = new Map([
   ["Croatia", "Croacia"],
   ["Curaçao", "Curazao"],
   ["Curacao", "Curazao"],
+  ["Czechia", "República Checa"],
   ["Czech Republic", "República Checa"],
   ["Chequia", "República Checa"],
   ["DR Congo", "RD del Congo"],
@@ -61,6 +72,8 @@ const teamAliases = new Map([
   ["Japan", "Japón"],
   ["Jordan", "Jordania"],
   ["Korea Republic", "Corea del Sur"],
+  ["Korea, Republic of", "Corea del Sur"],
+  ["Republic of Korea", "Corea del Sur"],
   ["South Korea", "Corea del Sur"],
   ["Mexico", "México"],
   ["Morocco", "Marruecos"],
@@ -143,6 +156,27 @@ const normalizeExternalResult = (item: RawResult) => {
   return { externalId, homeTeam, awayTeam, homeScore, awayScore, matchDate: matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate : null };
 };
 
+const sameMatchDate = (candidateDate: Date, resultDate: Date | null) =>
+  !resultDate || Math.abs(candidateDate.getTime() - resultDate.getTime()) <= 36 * 60 * 60 * 1000;
+
+const findMatchingPreview = (matches: Awaited<ReturnType<typeof prisma.match.findMany>>, result: NonNullable<ReturnType<typeof normalizeExternalResult>>) => {
+  const direct = matches.find((candidate) => {
+    if (result.externalId && candidate.externalId === result.externalId) return true;
+    return normalized(candidate.homeTeam) === normalized(result.homeTeam)
+      && normalized(candidate.awayTeam) === normalized(result.awayTeam)
+      && sameMatchDate(candidate.matchDate, result.matchDate);
+  });
+  if (direct) return { match: direct, homeScore: result.homeScore, awayScore: result.awayScore };
+
+  const reversed = matches.find((candidate) =>
+    normalized(candidate.homeTeam) === normalized(result.awayTeam)
+    && normalized(candidate.awayTeam) === normalized(result.homeTeam)
+    && sameMatchDate(candidate.matchDate, result.matchDate)
+  );
+  if (reversed) return { match: reversed, homeScore: result.awayScore, awayScore: result.homeScore };
+  return null;
+};
+
 const fetchExternalResults = async () => {
   const url = process.env.RESULTS_API_URL || FOOTBALL_DATA_URL;
   const isFootballData = url.includes("football-data.org");
@@ -173,24 +207,23 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
   const externalResults = externalResponse.finalResults;
 
   const previews: ResultPreview[] = [];
+  const unmatchedResults: UnmatchedResult[] = [];
   for (const result of externalResults) {
-    const match = matches.find((candidate) => {
-      if (result.externalId && candidate.externalId === result.externalId) return true;
-      const sameTeams = normalized(candidate.homeTeam) === normalized(result.homeTeam) && normalized(candidate.awayTeam) === normalized(result.awayTeam);
-      if (!sameTeams) return false;
-      if (!result.matchDate) return true;
-      return Math.abs(candidate.matchDate.getTime() - result.matchDate.getTime()) <= 36 * 60 * 60 * 1000;
-    });
-    if (!match) continue;
+    const matchPreview = findMatchingPreview(matches, result);
+    if (!matchPreview) {
+      unmatchedResults.push(result);
+      continue;
+    }
+    const { match, homeScore, awayScore } = matchPreview;
     previews.push({
       matchId: match.id,
       externalId: match.externalId,
       homeTeam: match.homeTeam,
       awayTeam: match.awayTeam,
-      homeScore: result.homeScore,
-      awayScore: result.awayScore,
+      homeScore,
+      awayScore,
       matchDate: match.matchDate,
-      alreadyLoaded: match.status === "FINISHED" && match.homeScore === result.homeScore && match.awayScore === result.awayScore,
+      alreadyLoaded: match.status === "FINISHED" && match.homeScore === homeScore && match.awayScore === awayScore,
       currentScore: match.homeScore !== null && match.awayScore !== null ? `${match.homeScore}-${match.awayScore}` : null
     });
   }
@@ -200,8 +233,9 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
     count: previews.length,
     apiMatchCount: externalResponse.rawCount,
     externalCount: externalResults.length,
-    unmatchedCount: externalResults.length - previews.length,
+    unmatchedCount: unmatchedResults.length,
     statusSummary: externalResponse.statusSummary,
+    unmatchedResults,
     results: previews
   };
 };
