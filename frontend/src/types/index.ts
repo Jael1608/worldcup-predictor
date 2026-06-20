@@ -6,7 +6,7 @@ export type Match = {
   id: number; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null;
   matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
   myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[]; predictionsHidden?: boolean;
-  predictionDistribution?: PredictionDistribution;
+  predictionDistribution?: PredictionDistribution | null; distributionHidden?: boolean;
 };
 export type PredictionDistribution = {
   total: number;

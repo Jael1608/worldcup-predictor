@@ -49,22 +49,29 @@ const predictionDistribution = (predictions: Array<{ predictedHome: number; pred
 
 export const listMatches = async (userId: number) => {
   const matches = await prisma.match.findMany({ include: { predictions: true }, orderBy: { matchDate: "asc" } });
-  return matches.map(({ predictions, ...match }) => ({
-    ...match,
-    myPrediction: predictions.find((prediction) => prediction.userId === userId) ?? null,
-    predictionDistribution: predictionDistribution(predictions),
-    canPredict: !predictions.some((prediction) => prediction.userId === userId) && match.status === "SCHEDULED" && match.matchDate > new Date() && hasDefinedTeams(match.homeTeam, match.awayTeam)
-  }));
+  const now = new Date();
+  return matches.map(({ predictions, ...match }) => {
+    const hasStarted = match.matchDate <= now;
+    return {
+      ...match,
+      myPrediction: predictions.find((prediction) => prediction.userId === userId) ?? null,
+      predictionDistribution: hasStarted ? predictionDistribution(predictions) : null,
+      distributionHidden: !hasStarted,
+      canPredict: !predictions.some((prediction) => prediction.userId === userId) && match.status === "SCHEDULED" && match.matchDate > now && hasDefinedTeams(match.homeTeam, match.awayTeam)
+    };
+  });
 };
 
 export const getMatch = async (id: number, userId: number) => {
   const match = await prisma.match.findUnique({ where: { id }, include: { predictions: true } });
   if (!match) throw new AppError(404, "Partido no encontrado");
   const { predictions, ...rest } = match;
+  const hasStarted = match.matchDate <= new Date();
   return {
     ...rest,
     myPrediction: predictions.find((prediction) => prediction.userId === userId) ?? null,
-    predictionDistribution: predictionDistribution(predictions),
+    predictionDistribution: hasStarted ? predictionDistribution(predictions) : null,
+    distributionHidden: !hasStarted,
     canPredict: !predictions.some((prediction) => prediction.userId === userId) && match.status === "SCHEDULED" && match.matchDate > new Date() && hasDefinedTeams(match.homeTeam, match.awayTeam)
   };
 };

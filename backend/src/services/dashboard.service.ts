@@ -76,8 +76,15 @@ export const getHistory = async () => {
     orderBy: { matchDate: "asc" }
   });
   return matches.map((match) => {
-    const predictionsHidden = false;
-    return { ...match, predictions: predictionsHidden ? [] : match.predictions, predictionsHidden };
+    const predictionsHidden = match.matchDate > new Date();
+    return {
+      ...match,
+      status: predictionsHidden ? "SCHEDULED" : match.status,
+      homeScore: predictionsHidden ? null : match.homeScore,
+      awayScore: predictionsHidden ? null : match.awayScore,
+      predictions: predictionsHidden ? [] : match.predictions,
+      predictionsHidden
+    };
   });
 };
 
