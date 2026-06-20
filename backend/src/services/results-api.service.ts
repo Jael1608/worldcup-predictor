@@ -45,13 +45,16 @@ const teamAliases = new Map([
   ["Austria", "Austria"],
   ["Belgium", "Bélgica"],
   ["Bosnia and Herzegovina", "Bosnia y Herzegovina"],
+  ["Bosnia-Herzegovina", "Bosnia y Herzegovina"],
   ["Brazil", "Brasil"],
   ["Cabo Verde", "Cabo Verde"],
   ["Cape Verde", "Cabo Verde"],
+  ["Cape Verde Islands", "Cabo Verde"],
   ["Canada", "Canadá"],
   ["Colombia", "Colombia"],
   ["Costa de Marfil", "Costa de Marfil"],
   ["Côte d'Ivoire", "Costa de Marfil"],
+  ["Ivory Coast", "Costa de Marfil"],
   ["Croatia", "Croacia"],
   ["Curaçao", "Curazao"],
   ["Curacao", "Curazao"],
@@ -59,6 +62,7 @@ const teamAliases = new Map([
   ["Czech Republic", "República Checa"],
   ["Chequia", "República Checa"],
   ["DR Congo", "RD del Congo"],
+  ["Congo DR", "RD del Congo"],
   ["Democratic Republic of the Congo", "RD del Congo"],
   ["Ecuador", "Ecuador"],
   ["Egypt", "Egipto"],
@@ -102,9 +106,22 @@ const teamAliases = new Map([
   ["Uzbekistán", "Uzbekistán"]
 ]);
 
-const normalized = (value: unknown) => {
-  const text = String(value ?? "").replace(/\s+(FC|CF)$/i, "").trim();
-  return (teamAliases.get(text) ?? text)
+const simplifyTeamName = (value: unknown) => String(value ?? "")
+  .replace(/\s+(FC|CF)$/i, "")
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-zA-Z0-9]+/g, " ")
+  .trim()
+  .replace(/\s+/g, " ")
+  .toLowerCase();
+
+const normalizedAliases = new Map(
+  [...teamAliases].map(([alias, canonical]) => [simplifyTeamName(alias), simplifyTeamName(canonical)])
+);
+
+export const normalizeTeamName = (value: unknown) => {
+  const text = simplifyTeamName(value);
+  return normalizedAliases.get(text) ?? text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
@@ -162,15 +179,15 @@ const sameMatchDate = (candidateDate: Date, resultDate: Date | null) =>
 const findMatchingPreview = (matches: Awaited<ReturnType<typeof prisma.match.findMany>>, result: NonNullable<ReturnType<typeof normalizeExternalResult>>) => {
   const direct = matches.find((candidate) => {
     if (result.externalId && candidate.externalId === result.externalId) return true;
-    return normalized(candidate.homeTeam) === normalized(result.homeTeam)
-      && normalized(candidate.awayTeam) === normalized(result.awayTeam)
+    return normalizeTeamName(candidate.homeTeam) === normalizeTeamName(result.homeTeam)
+      && normalizeTeamName(candidate.awayTeam) === normalizeTeamName(result.awayTeam)
       && sameMatchDate(candidate.matchDate, result.matchDate);
   });
   if (direct) return { match: direct, homeScore: result.homeScore, awayScore: result.awayScore };
 
   const reversed = matches.find((candidate) =>
-    normalized(candidate.homeTeam) === normalized(result.awayTeam)
-    && normalized(candidate.awayTeam) === normalized(result.homeTeam)
+    normalizeTeamName(candidate.homeTeam) === normalizeTeamName(result.awayTeam)
+    && normalizeTeamName(candidate.awayTeam) === normalizeTeamName(result.homeTeam)
     && sameMatchDate(candidate.matchDate, result.matchDate)
   );
   if (reversed) return { match: reversed, homeScore: result.awayScore, awayScore: result.homeScore };
