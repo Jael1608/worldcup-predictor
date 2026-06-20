@@ -4,3 +4,4 @@ export const dashboardRoutes = Router();
 dashboardRoutes.get("/standings", controller.standings);
 dashboardRoutes.get("/my-summary", controller.summary);
 dashboardRoutes.get("/history", controller.history);
+dashboardRoutes.get("/ranking-history", controller.rankingHistory);

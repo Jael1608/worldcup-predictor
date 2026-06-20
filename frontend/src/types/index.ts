@@ -6,8 +6,24 @@ export type Match = {
   id: number; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null;
   matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
   myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[]; predictionsHidden?: boolean;
+  predictionDistribution?: PredictionDistribution;
+};
+export type PredictionDistribution = {
+  total: number;
+  home: { count: number; percentage: number };
+  draw: { count: number; percentage: number };
+  away: { count: number; percentage: number };
 };
 export type Standing = { userId: number; name: string; username: string; totalPoints: number; exactScores: number; winnerHits: number; predictionsCount: number; championBonus: number };
+export type RankingHistory = {
+  players: Array<{ userId: number; name: string; username: string; currentPosition: number; previousPosition: number; movement: number }>;
+  snapshots: Array<{
+    matchId: number;
+    label: string;
+    matchDate: string;
+    positions: Array<{ userId: number; position: number; totalPoints: number }>;
+  }>;
+};
 export type Summary = { totalPoints: number; position: number; predictionsCount: number; exactScores: number; winnerHits: number; championBonus: number; pendingMatches: number; accuracyPercentage: number; evaluatedPredictions: number; bestDay: { date: string; points: number } | null };
 export type ChampionPrediction = { id: number; team: string; createdAt: string };
 export type ChampionPredictionState = { prediction: ChampionPrediction | null; teams: string[]; closesAt: string; canPredict: boolean };
