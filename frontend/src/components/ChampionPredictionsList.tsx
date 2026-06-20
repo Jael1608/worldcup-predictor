@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import { ChampionPredictionWithUser } from "../types";
+import { useUserDateTime } from "../hooks/useUserDateTime";
 
 export const ChampionPredictionsList = () => {
+  const { formatDateTime } = useUserDateTime();
   const [predictions, setPredictions] = useState<ChampionPredictionWithUser[]>([]);
   useEffect(() => { void api.get<ChampionPredictionWithUser[]>("/predictions/champion/all").then(({ data }) => setPredictions(data)); }, []);
 
@@ -18,7 +20,7 @@ export const ChampionPredictionsList = () => {
       {predictions.map((prediction) => <div className="rounded-xl bg-[#16243a] p-3" key={prediction.id}>
         <p className="text-sm font-bold text-slate-200">{prediction.user.name}</p>
         <p className="mt-1 text-lg font-black text-yellow-300">{prediction.team}</p>
-        <p className="mt-1 text-xs text-slate-500">{new Date(prediction.createdAt).toLocaleString()}</p>
+        <p className="mt-1 text-xs text-slate-500">{formatDateTime(prediction.createdAt)}</p>
       </div>)}
     </div> : <p className="mt-4 text-sm text-slate-400">Todavía nadie cargó su campeón.</p>}
   </section>;

@@ -1,4 +1,5 @@
 import { Standing } from "../types";
+import { useUserDateTime } from "../hooks/useUserDateTime";
 
 const fitText = (context: CanvasRenderingContext2D, text: string, maxWidth: number) => {
   if (context.measureText(text).width <= maxWidth) return text;
@@ -7,7 +8,7 @@ const fitText = (context: CanvasRenderingContext2D, text: string, maxWidth: numb
   return `${shortened}...`;
 };
 
-const createRankingImage = async (standings: Standing[], title: string) => {
+const createRankingImage = async (standings: Standing[], title: string, formattedNow: string) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 350 + standings.length * 78;
@@ -26,7 +27,7 @@ const createRankingImage = async (standings: Standing[], title: string) => {
   context.fillText(title, 64, 148);
   context.fillStyle = "#94a3b8";
   context.font = "28px Arial";
-  context.fillText(new Date().toLocaleString(), 64, 198);
+  context.fillText(formattedNow, 64, 198);
 
   const columns = {
     name: 74,
@@ -75,8 +76,9 @@ const createRankingImage = async (standings: Standing[], title: string) => {
 };
 
 export const ShareRankingButton = ({ standings, title }: { standings: Standing[]; title: string }) => {
+  const { formatDateTime } = useUserDateTime();
   const share = async () => {
-    const blob = await createRankingImage(standings, title);
+    const blob = await createRankingImage(standings, title, formatDateTime(new Date()));
     const file = new File([blob], "ranking-quiniela-mundial-2026.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ title: "Ranking Quiniela Mundial 2026", text: title, files: [file] });

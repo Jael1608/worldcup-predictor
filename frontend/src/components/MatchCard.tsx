@@ -2,9 +2,11 @@ import { FormEvent, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import { Match } from "../types";
 import { Badge } from "./Badge";
+import { useUserDateTime } from "../hooks/useUserDateTime";
 
 const stage: Record<string, string> = { GROUP: "Fase de grupos", ROUND_OF_32: "Dieciseisavos", ROUND_OF_16: "Octavos", QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semifinal", THIRD_PLACE: "Tercer puesto", FINAL: "Final" };
 export const MatchCard = ({ match, onSaved }: { match: Match; onSaved: () => void }) => {
+  const { formatDateTime } = useUserDateTime();
   const [home, setHome] = useState(""); const [away, setAway] = useState(""); const [saving, setSaving] = useState(false); const [error, setError] = useState("");
   const save = async (event: FormEvent) => {
     event.preventDefault(); setSaving(true); setError("");
@@ -13,7 +15,7 @@ export const MatchCard = ({ match, onSaved }: { match: Match; onSaved: () => voi
   };
   const distribution = match.predictionDistribution;
   return <article className="panel">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-wider text-blue-300">{stage[match.stage]} {match.groupName && `· ${match.groupName}`}</p><p className="mt-1 text-xs text-slate-400">{new Date(match.matchDate).toLocaleString()}</p></div><Badge tone={match.status === "FINISHED" ? "green" : "blue"}>{match.status}</Badge></div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-bold uppercase tracking-wider text-blue-300">{stage[match.stage]} {match.groupName && `· ${match.groupName}`}</p><p className="mt-1 text-xs text-slate-400">{formatDateTime(match.matchDate)}</p></div><Badge tone={match.status === "FINISHED" ? "green" : "blue"}>{match.status}</Badge></div>
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center"><p className="font-bold">{match.homeTeam}</p><p className="text-xl font-black text-slate-400">VS</p><p className="font-bold">{match.awayTeam}</p></div>
     {match.status === "FINISHED" && <p className="mt-4 rounded-xl bg-green-500/10 p-3 text-center font-black text-green-300">Resultado oficial: {match.homeScore} - {match.awayScore}</p>}
     {match.distributionHidden ? <div className="mt-4 rounded-xl border border-[#30415d] bg-[#0b1728] p-3 text-center text-sm text-slate-400">La distribución se revelará cuando comience el partido.</div>

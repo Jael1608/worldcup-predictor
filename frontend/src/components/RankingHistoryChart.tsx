@@ -1,8 +1,10 @@
 import { RankingHistory } from "../types";
+import { useUserDateTime } from "../hooks/useUserDateTime";
 
 const colors = ["#60a5fa", "#facc15", "#4ade80", "#f472b6", "#c084fc", "#fb923c", "#22d3ee", "#f87171"];
 
 export const RankingHistoryChart = ({ history }: { history: RankingHistory }) => {
+  const { formatDate } = useUserDateTime();
   if (!history.snapshots.length) return <section className="panel"><h2 className="text-xl font-black">Evolución del ranking</h2><p className="mt-3 text-sm text-slate-400">La gráfica aparecerá cuando se cargue el primer resultado.</p></section>;
 
   const width = 1000;
@@ -27,7 +29,7 @@ export const RankingHistoryChart = ({ history }: { history: RankingHistory }) =>
           <text x={padding.left - 18} y={yOf(index + 1) + 6} textAnchor="middle" fill="#94a3b8" fontSize="18">{index + 1}</text>
         </g>)}
         {tickIndexes.map((index) => <text key={`tick-${index}`} x={xOf(index)} y={height - 14} textAnchor="middle" fill="#94a3b8" fontSize="15">
-          {new Date(history.snapshots[index].matchDate).toLocaleDateString()}
+          {formatDate(history.snapshots[index].matchDate)}
         </text>)}
         {history.players.map((player, playerIndex) => {
           const points = history.snapshots.map((snapshot, index) => {
