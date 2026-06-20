@@ -24,106 +24,71 @@ const fitText = (context: CanvasRenderingContext2D, text: string, maxWidth: numb
 const createRankingImage = async (standings: Standing[], title: string) => {
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
-  canvas.height = 1920;
+  canvas.height = 1350;
   const context = canvas.getContext("2d")!;
-  const gradient = context.createLinearGradient(0, 0, 1080, 1920);
+  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
   gradient.addColorStop(0, "#07111f");
-  gradient.addColorStop(0.55, "#102849");
   gradient.addColorStop(1, "#173b73");
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  context.fillStyle = "#60a5fa";
-  context.font = "700 30px Arial";
   context.textAlign = "center";
-  context.fillText("QUINIELA MUNDIAL 2026", 540, 78);
-  context.fillStyle = "#f8fafc";
-  context.font = "700 58px Arial";
-  context.fillText(title, 540, 150);
-  context.fillStyle = "#94a3b8";
-  context.font = "26px Arial";
-  context.fillText(new Date().toLocaleString(), 540, 200);
-
-  const top = standings.slice(0, 3);
-  const podium = [
-    { standing: top[1], place: "2", x: 100, y: 430, width: 280, height: 250, color: "#cbd5e1", background: "#334155" },
-    { standing: top[0], place: "1", x: 400, y: 320, width: 280, height: 360, color: "#fde047", background: "#713f12" },
-    { standing: top[2], place: "3", x: 700, y: 500, width: 280, height: 180, color: "#fdba74", background: "#7c2d12" }
-  ];
-
-  context.fillStyle = "#bfdbfe";
+  context.fillStyle = "#60a5fa";
   context.font = "700 28px Arial";
-  context.fillText("PODIO TOP 3", 540, 268);
-  podium.forEach(({ standing, place, x, y, width, height, color, background }) => {
-    if (!standing) return;
-    context.fillStyle = background;
-    roundedRect(context, x, y, width, height, 28);
-    context.fill();
-    context.strokeStyle = color;
-    context.lineWidth = 4;
-    context.stroke();
-    context.fillStyle = color;
-    context.font = "700 58px Arial";
-    context.fillText(place, x + width / 2, y + 78);
-    context.fillStyle = "#f8fafc";
-    context.font = "700 30px Arial";
-    context.fillText(fitText(context, standing.name, width - 32), x + width / 2, y + 130);
-    context.fillStyle = "#e2e8f0";
-    context.font = "700 27px Arial";
-    context.fillText(`${standing.totalPoints} puntos`, x + width / 2, y + 174);
-  });
-
-  const last = standings[standings.length - 1];
-  const lastPlayers = last ? standings.filter((standing) => standing.totalPoints === last.totalPoints) : [];
-  context.fillStyle = "#163827";
-  roundedRect(context, 64, 730, 952, 150, 28);
-  context.fill();
-  context.strokeStyle = "#84cc16";
-  context.lineWidth = 3;
-  context.stroke();
-  context.fillStyle = "#bef264";
-  context.font = "700 26px Arial";
-  context.fillText("EL PASTO DEL GRUPO", 540, 778);
+  context.fillText("QUINIELA MUNDIAL 2026", 540, 60);
   context.fillStyle = "#f8fafc";
-  context.font = "700 34px Arial";
-  context.fillText(fitText(context, lastPlayers.map((standing) => standing.name).join(", ") || "-", 850), 540, 824);
-  context.fillStyle = "#d9f99d";
+  context.font = "700 52px Arial";
+  context.fillText(title, 540, 122);
+  context.fillStyle = "#94a3b8";
   context.font = "24px Arial";
-  context.fillText(last ? `${last.totalPoints} puntos` : "Sin datos", 540, 858);
+  context.fillText(new Date().toLocaleString(), 540, 164);
 
-  context.fillStyle = "#f8fafc";
-  context.font = "700 38px Arial";
-  context.fillText("TABLA COMPLETA", 540, 960);
+  const tableX = 50;
+  const tableWidth = 980;
+  const headerY = 205;
+  const headerHeight = 58;
+  const availableRowsHeight = 1035;
+  const rowHeight = Math.min(60, Math.floor(availableRowsHeight / Math.max(standings.length, 1)));
+  const columns = {
+    position: tableX + 28,
+    player: tableX + 100,
+    points: tableX + 670,
+    exact: tableX + 790,
+    winners: tableX + 915
+  };
 
-  const columns = standings.length > 10 ? 2 : 1;
-  const rowsPerColumn = Math.ceil(standings.length / columns);
-  const columnWidth = columns === 2 ? 456 : 952;
-  const columnGap = 40;
-  const startX = columns === 2 ? 64 : 64;
-  const startY = 1010;
-  const rowHeight = Math.min(72, Math.floor(790 / Math.max(rowsPerColumn, 1)));
+  context.fillStyle = "#1d4ed8";
+  roundedRect(context, tableX, headerY, tableWidth, headerHeight, 18);
+  context.fill();
+  context.fillStyle = "#dbeafe";
+  context.font = "700 21px Arial";
+  context.textAlign = "left";
+  context.fillText("#", columns.position, headerY + 37);
+  context.fillText("JUGADOR", columns.player, headerY + 37);
+  context.textAlign = "center";
+  context.fillText("PTS", columns.points, headerY + 37);
+  context.fillText("EXACTOS", columns.exact, headerY + 37);
+  context.fillText("GANADORES", columns.winners, headerY + 37);
 
   standings.forEach((standing, index) => {
-    const column = Math.floor(index / rowsPerColumn);
-    const row = index % rowsPerColumn;
-    const x = startX + column * (columnWidth + columnGap);
-    const y = startY + row * rowHeight;
-    context.fillStyle = index === 0 ? "rgba(250, 204, 21, 0.18)" : "rgba(15, 23, 42, 0.62)";
-    roundedRect(context, x, y, columnWidth, rowHeight - 8, 16);
+    const y = headerY + headerHeight + 10 + index * rowHeight;
+    context.fillStyle = index === 0
+      ? "rgba(250, 204, 21, 0.20)"
+      : index % 2 === 0 ? "rgba(15, 23, 42, 0.72)" : "rgba(30, 41, 59, 0.72)";
+    roundedRect(context, tableX, y, tableWidth, rowHeight - 6, 13);
     context.fill();
-    context.fillStyle = index === 0 ? "#fde047" : "#f8fafc";
-    context.font = "700 26px Arial";
-    context.textAlign = "left";
-    context.fillText(`${index + 1}.`, x + 18, y + rowHeight / 2 + 5);
-    context.fillText(fitText(context, standing.name, columnWidth - 190), x + 70, y + rowHeight / 2 + 5);
-    context.textAlign = "right";
-    context.fillText(`${standing.totalPoints} pts`, x + columnWidth - 18, y + rowHeight / 2 + 5);
-  });
 
-  context.textAlign = "center";
-  context.fillStyle = "#93c5fd";
-  context.font = "700 24px Arial";
-  context.fillText("Hecho para compartir en historias de WhatsApp", 540, 1870);
+    const fontSize = Math.max(20, Math.min(27, rowHeight - 24));
+    context.font = `700 ${fontSize}px Arial`;
+    context.fillStyle = index === 0 ? "#fde047" : "#f8fafc";
+    context.textAlign = "left";
+    context.fillText(`${index + 1}`, columns.position, y + rowHeight / 2 + fontSize / 3 - 3);
+    context.fillText(fitText(context, standing.name, 500), columns.player, y + rowHeight / 2 + fontSize / 3 - 3);
+    context.textAlign = "center";
+    context.fillText(`${standing.totalPoints}`, columns.points, y + rowHeight / 2 + fontSize / 3 - 3);
+    context.fillText(`${standing.exactScores}`, columns.exact, y + rowHeight / 2 + fontSize / 3 - 3);
+    context.fillText(`${standing.winnerHits}`, columns.winners, y + rowHeight / 2 + fontSize / 3 - 3);
+  });
 
   return new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("No se pudo crear la imagen")), "image/png")
@@ -133,9 +98,9 @@ const createRankingImage = async (standings: Standing[], title: string) => {
 export const ShareRankingButton = ({ standings, title }: { standings: Standing[]; title: string }) => {
   const share = async () => {
     const blob = await createRankingImage(standings, title);
-    const file = new File([blob], "ranking-quiniela-mundial-2026-historia.png", { type: "image/png" });
+    const file = new File([blob], "tabla-quiniela-mundial-2026.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title: "Ranking Quiniela Mundial 2026", text: title, files: [file] });
+      await navigator.share({ title: "Tabla Quiniela Mundial 2026", text: title, files: [file] });
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -144,7 +109,7 @@ export const ShareRankingButton = ({ standings, title }: { standings: Standing[]
     anchor.download = file.name;
     anchor.click();
     URL.revokeObjectURL(url);
-    window.open(`https://wa.me/?text=${encodeURIComponent(`Ranking Quiniela Mundial 2026 - ${title}. Adjunta la imagen descargada.`)}`, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(`Tabla Quiniela Mundial 2026 - ${title}. Adjunta la imagen descargada.`)}`, "_blank");
   };
-  return <button className="button-secondary" onClick={() => void share()}>Compartir historia por WhatsApp</button>;
+  return <button className="button-secondary" onClick={() => void share()}>Compartir tabla por WhatsApp</button>;
 };
