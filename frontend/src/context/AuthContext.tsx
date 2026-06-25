@@ -1,6 +1,7 @@
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { User } from "../types";
+import { isAdministrator } from "../utils/authorization";
 
 type AuthValue = { user: User | null; token: string | null; loading: boolean; isAuthenticated: boolean; isAdmin: boolean; login: (username: string, password: string) => Promise<void>; logout: () => void };
 const AuthContext = createContext<AuthValue | null>(null);
@@ -20,7 +21,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     localStorage.setItem("token", data.token); setToken(data.token); setUser(data.user);
   };
   const logout = () => { localStorage.removeItem("token"); setToken(null); setUser(null); };
-  return <AuthContext.Provider value={{ user, token, loading, isAuthenticated: Boolean(user), isAdmin: user?.role === "ADMIN", login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, token, loading, isAuthenticated: Boolean(user), isAdmin: isAdministrator(user), login, logout }}>{children}</AuthContext.Provider>;
 };
 export const useAuth = () => {
   const value = useContext(AuthContext);
