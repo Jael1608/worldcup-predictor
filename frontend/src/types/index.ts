@@ -58,3 +58,9 @@ export type ResultPreviewResponse = {
   unmatchedResults: UnmatchedResult[];
   results: ResultPreview[];
 };
+export type KnockoutSyncResponse = {
+  updated: number;
+  completedGroups: number;
+  thirdPlaceSlotsReady: boolean;
+  matches: Array<{ matchId: number; matchNumber: number; homeTeam: string; awayTeam: string }>;
+};

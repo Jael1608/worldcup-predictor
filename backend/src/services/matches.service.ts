@@ -3,6 +3,7 @@ import { prisma } from "../prisma";
 import { AppError } from "../middlewares/error.middleware";
 import { calculatePoints } from "./scoring.service";
 import { MatchStage, MatchStatus, matchStages, matchStatuses } from "../types/domain";
+import { syncKnockoutBracket } from "./bracket.service";
 
 const stages: readonly string[] = matchStages;
 const statuses: readonly string[] = matchStatuses;
@@ -134,6 +135,7 @@ export const saveResult = async (id: number, body: Record<string, unknown>) => {
       where: { id: prediction.id },
       data: { points: calculatePoints(prediction.predictedHome, prediction.predictedAway, homeScore, awayScore) }
     })));
+    await syncKnockoutBracket(tx);
     return match;
   });
 };

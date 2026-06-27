@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { api, errorMessage } from "../api/client";
 import { AdminMatchForm } from "../components/AdminMatchForm";
-import { Match, OfficialChampionState, ResultPreview, ResultPreviewResponse, UnmatchedResult } from "../types";
+import { KnockoutSyncResponse, Match, OfficialChampionState, ResultPreview, ResultPreviewResponse, UnmatchedResult } from "../types";
 
 const sample = `{"matches":[{"externalId":"match-001","homeTeam":"Alemania","awayTeam":"Curazao","matchDate":"2026-06-15T18:00:00.000Z","stage":"GROUP","groupName":"Grupo A"}]}`;
 
@@ -15,6 +15,7 @@ export const AdminPage = () => {
   const [unmatchedResults, setUnmatchedResults] = useState<UnmatchedResult[]>([]);
   const [selectedResults, setSelectedResults] = useState<number[]>([]);
   const [searchingResults, setSearchingResults] = useState(false);
+  const [syncingKnockout, setSyncingKnockout] = useState(false);
   const [resultApiMessage, setResultApiMessage] = useState("");
   const [matchSearch, setMatchSearch] = useState("");
   const [user, setUser] = useState({ name: "", username: "", password: "", role: "PLAYER" });
@@ -56,7 +57,27 @@ export const AdminPage = () => {
     void run(async () => {
       await api.patch(`/matches/${result.matchId}/result`, { homeScore: Number(result.homeScore), awayScore: Number(result.awayScore) });
       setResult({ matchId: "", homeScore: "", awayScore: "" });
-    }, "Resultado guardado y puntos recalculados");
+    }, "Resultado guardado, puntos recalculados y cruces actualizados");
+  };
+  const syncKnockoutBracket = async () => {
+    setSyncingKnockout(true);
+    setMessage("");
+    try {
+      const { data } = await api.post<KnockoutSyncResponse>("/admin/sync-knockout-bracket");
+      const detail = data.updated
+        ? `Cruces actualizados: ${data.updated} partido(s).`
+        : data.completedGroups < 12
+          ? `No hay cruces nuevos todavía. Grupos completos: ${data.completedGroups}/12.`
+          : data.thirdPlaceSlotsReady
+            ? "Los cruces ya estaban al día."
+            : "Todavía no se pudieron ubicar los mejores terceros.";
+      setMessage(detail);
+      await load();
+    } catch (error) {
+      setMessage(errorMessage(error));
+    } finally {
+      setSyncingKnockout(false);
+    }
   };
   const searchResults = async () => {
     setSearchingResults(true);
@@ -108,13 +129,14 @@ export const AdminPage = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="button-secondary" disabled={searchingResults} onClick={() => void searchResults()}>{searchingResults ? "Buscando..." : "Buscar resultados ahora"}</button>
+            <button className="button-secondary" disabled={syncingKnockout} onClick={() => void syncKnockoutBracket()}>{syncingKnockout ? "Actualizando..." : "Actualizar cruces"}</button>
             <button className="button-primary" disabled={!selectedResults.length} onClick={() => void run(async () => {
               await api.post("/admin/results-apply", { matchIds: selectedResults });
               setResultPreview([]);
               setUnmatchedResults([]);
               setSelectedResults([]);
               setResultApiMessage("");
-            }, "Resultados aplicados y puntos recalculados")}>Confirmar nuevos ({selectedResults.length})</button>
+            }, "Resultados aplicados, puntos recalculados y cruces actualizados")}>Confirmar nuevos ({selectedResults.length})</button>
           </div>
         </div>
         {resultApiMessage && <p className="mt-3 rounded-xl bg-[#16243a] p-3 text-sm text-slate-200">{resultApiMessage}</p>}

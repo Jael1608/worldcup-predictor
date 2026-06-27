@@ -3,6 +3,8 @@ import { AppError } from "../middlewares/error.middleware";
 import { fetchOpenFootballMatches } from "../providers/openfootball.provider";
 import { ImportedMatch, parseManualMatches } from "../providers/manual.provider";
 
+const isPlaceholderTeam = (team: string) => /^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(team);
+
 const saveImported = async (matches: ImportedMatch[], source: string) => {
   let created = 0;
   let updated = 0;
@@ -10,8 +12,12 @@ const saveImported = async (matches: ImportedMatch[], source: string) => {
     const data = { homeTeam: match.homeTeam.trim(), awayTeam: match.awayTeam.trim(), matchDate: new Date(match.matchDate), stage: match.stage, groupName: match.groupName?.trim() || null, venue: match.venue?.trim() || null, source };
     if (match.externalId) {
       const existing = await prisma.match.findUnique({ where: { externalId: match.externalId } });
-      const keepResolvedKnockoutTeams = source === "fifa-official-2026-04-10" && existing?.stage !== "GROUP" && existing && !/^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(existing.homeTeam) && !/^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(existing.awayTeam);
-      const update = keepResolvedKnockoutTeams ? { ...data, homeTeam: existing.homeTeam, awayTeam: existing.awayTeam } : data;
+      const keepResolvedKnockoutTeams = source === "fifa-official-2026-04-10" && existing?.stage !== "GROUP";
+      const update = keepResolvedKnockoutTeams ? {
+        ...data,
+        homeTeam: existing && !isPlaceholderTeam(existing.homeTeam) ? existing.homeTeam : data.homeTeam,
+        awayTeam: existing && !isPlaceholderTeam(existing.awayTeam) ? existing.awayTeam : data.awayTeam
+      } : data;
       await prisma.match.upsert({ where: { externalId: match.externalId }, create: { ...data, externalId: match.externalId }, update });
       existing ? updated++ : created++;
     } else {
