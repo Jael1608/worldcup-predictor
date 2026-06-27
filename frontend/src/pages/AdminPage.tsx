@@ -17,7 +17,6 @@ export const AdminPage = () => {
   const [searchingResults, setSearchingResults] = useState(false);
   const [syncingKnockout, setSyncingKnockout] = useState(false);
   const [resultApiMessage, setResultApiMessage] = useState("");
-  const [matchSearch, setMatchSearch] = useState("");
   const [user, setUser] = useState({ name: "", username: "", password: "", role: "PLAYER" });
   const [result, setResult] = useState({ matchId: "", homeScore: "", awayScore: "" });
 
@@ -34,8 +33,7 @@ export const AdminPage = () => {
 
   const pendingMatches = useMemo(() => matches
     .filter((match) => match.status !== "FINISHED" && match.homeScore === null && match.awayScore === null)
-    .filter((match) => `${match.homeTeam} ${match.awayTeam}`.toLowerCase().includes(matchSearch.trim().toLowerCase()))
-    .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()), [matches, matchSearch]);
+    .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()), [matches]);
 
   const run = async (action: () => Promise<unknown>, success: string) => {
     setMessage("");
@@ -145,8 +143,8 @@ export const AdminPage = () => {
           <div className="mt-2 space-y-1">{unmatchedResults.map((item) => <p key={`${item.externalId ?? ""}-${item.homeTeam}-${item.awayTeam}`}>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}{item.matchDate ? ` · ${new Date(item.matchDate).toLocaleString()}` : ""}</p>)}</div>
         </div>}
         {resultPreview.length > 0 && <div className="mt-4 max-h-96 space-y-2 overflow-auto">
-          {resultPreview.map((item) => <label key={item.matchId} className={`flex items-center justify-between gap-3 rounded-xl p-3 text-sm ${item.alreadyLoaded ? "bg-[#111d2d] opacity-60" : "cursor-pointer bg-[#16243a]"}`}>
-            <span><input className="mr-2" type="checkbox" checked={selectedResults.includes(item.matchId)} disabled={item.alreadyLoaded} onChange={() => toggleResult(item.matchId)}/>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}<span className="ml-2 text-xs text-slate-400">{new Date(item.matchDate).toLocaleDateString()}</span></span>
+          {resultPreview.map((item) => <label key={item.matchId} className={`flex flex-col gap-2 rounded-xl p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${item.alreadyLoaded ? "bg-[#111d2d] opacity-60" : "cursor-pointer bg-[#16243a]"}`}>
+            <span className="min-w-0"><input className="mr-2" type="checkbox" checked={selectedResults.includes(item.matchId)} disabled={item.alreadyLoaded} onChange={() => toggleResult(item.matchId)}/>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}<span className="ml-2 text-xs text-slate-400">{new Date(item.matchDate).toLocaleDateString()}</span></span>
             <strong className={item.alreadyLoaded ? "text-green-300" : "text-blue-300"}>{item.alreadyLoaded ? "Ya cargado" : item.currentScore ? `Actual: ${item.currentScore}` : "Nuevo"}</strong>
           </label>)}
         </div>}
@@ -160,17 +158,16 @@ export const AdminPage = () => {
           </div>
           <span className="rounded-full bg-blue-500/10 px-3 py-1 text-sm font-bold text-blue-200">{pendingMatches.length} pendientes</span>
         </div>
-        <form className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_140px_140px_auto]" onSubmit={saveResult}>
-          <input placeholder="Buscar por selección" value={matchSearch} onChange={(event) => setMatchSearch(event.target.value)}/>
-          <select required value={result.matchId} onChange={(event) => setResult({ ...result, matchId: event.target.value })}>
+        <form className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_130px_130px_auto]" onSubmit={saveResult}>
+          <select className="min-w-0" required value={result.matchId} onChange={(event) => setResult({ ...result, matchId: event.target.value })}>
             <option value="">Seleccionar partido pendiente</option>
             {pendingMatches.map((match) => <option key={match.id} value={match.id}>{new Date(match.matchDate).toLocaleString()} · {match.homeTeam} vs {match.awayTeam}</option>)}
           </select>
           <input required min="0" type="number" placeholder="Goles local" value={result.homeScore} onChange={(event) => setResult({ ...result, homeScore: event.target.value })}/>
           <input required min="0" type="number" placeholder="Goles visitante" value={result.awayScore} onChange={(event) => setResult({ ...result, awayScore: event.target.value })}/>
-          <button className="button-primary">Guardar</button>
+          <button className="button-primary w-full lg:w-auto">Guardar</button>
         </form>
-        {!pendingMatches.length && <p className="mt-3 text-sm text-green-300">{matchSearch ? "No hay pendientes que coincidan con la búsqueda." : "Todos los partidos cargados tienen resultado."}</p>}
+        {!pendingMatches.length && <p className="mt-3 text-sm text-green-300">Todos los partidos cargados tienen resultado.</p>}
       </div>
 
       <div className="panel lg:col-span-2">
