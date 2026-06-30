@@ -4,6 +4,7 @@ import { AdminMatchForm } from "../components/AdminMatchForm";
 import { KnockoutSyncResponse, Match, OfficialChampionState, ResultPreview, ResultPreviewResponse, UnmatchedResult } from "../types";
 
 const sample = `{"matches":[{"externalId":"match-001","homeTeam":"Alemania","awayTeam":"Curazao","matchDate":"2026-06-15T18:00:00.000Z","stage":"GROUP","groupName":"Grupo A"}]}`;
+const knockoutStages = new Set(["ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"]);
 
 export const AdminPage = () => {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -18,7 +19,7 @@ export const AdminPage = () => {
   const [syncingKnockout, setSyncingKnockout] = useState(false);
   const [resultApiMessage, setResultApiMessage] = useState("");
   const [user, setUser] = useState({ name: "", username: "", password: "", role: "PLAYER" });
-  const [result, setResult] = useState({ matchId: "", homeScore: "", awayScore: "" });
+  const [result, setResult] = useState({ matchId: "", homeScore: "", awayScore: "", winnerTeam: "" });
 
   const load = async () => {
     const { data } = await api.get<Match[]>("/matches");
@@ -34,6 +35,13 @@ export const AdminPage = () => {
   const pendingMatches = useMemo(() => matches
     .filter((match) => match.status !== "FINISHED" && match.homeScore === null && match.awayScore === null)
     .sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime()), [matches]);
+  const selectedManualMatch = useMemo(() => pendingMatches.find((match) => match.id === Number(result.matchId)) ?? null, [pendingMatches, result.matchId]);
+  const needsPenaltyWinner = Boolean(
+    selectedManualMatch &&
+    knockoutStages.has(selectedManualMatch.stage) &&
+    result.homeScore !== "" &&
+    result.homeScore === result.awayScore
+  );
 
   const run = async (action: () => Promise<unknown>, success: string) => {
     setMessage("");
@@ -53,8 +61,8 @@ export const AdminPage = () => {
   const saveResult = (event: FormEvent) => {
     event.preventDefault();
     void run(async () => {
-      await api.patch(`/matches/${result.matchId}/result`, { homeScore: Number(result.homeScore), awayScore: Number(result.awayScore) });
-      setResult({ matchId: "", homeScore: "", awayScore: "" });
+      await api.patch(`/matches/${result.matchId}/result`, { homeScore: Number(result.homeScore), awayScore: Number(result.awayScore), winnerTeam: result.winnerTeam || undefined });
+      setResult({ matchId: "", homeScore: "", awayScore: "", winnerTeam: "" });
     }, "Resultado guardado, puntos recalculados y cruces actualizados");
   };
   const syncKnockoutBracket = async () => {
@@ -140,11 +148,11 @@ export const AdminPage = () => {
         {resultApiMessage && <p className="mt-3 rounded-xl bg-[#16243a] p-3 text-sm text-slate-200">{resultApiMessage}</p>}
         {unmatchedResults.length > 0 && <div className="mt-4 rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm text-yellow-100">
           <strong>Resultados sin coincidencia:</strong>
-          <div className="mt-2 space-y-1">{unmatchedResults.map((item) => <p key={`${item.externalId ?? ""}-${item.homeTeam}-${item.awayTeam}`}>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}{item.matchDate ? ` · ${new Date(item.matchDate).toLocaleString()}` : ""}</p>)}</div>
+          <div className="mt-2 space-y-1">{unmatchedResults.map((item) => <p key={`${item.externalId ?? ""}-${item.homeTeam}-${item.awayTeam}`}>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}{item.decidedByPenalties && item.winnerTeam ? ` · avanzó ${item.winnerTeam} por penales` : ""}{item.matchDate ? ` · ${new Date(item.matchDate).toLocaleString()}` : ""}</p>)}</div>
         </div>}
         {resultPreview.length > 0 && <div className="mt-4 max-h-96 space-y-2 overflow-auto">
           {resultPreview.map((item) => <label key={item.matchId} className={`flex flex-col gap-2 rounded-xl p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${item.alreadyLoaded ? "bg-[#111d2d] opacity-60" : "cursor-pointer bg-[#16243a]"}`}>
-            <span className="min-w-0"><input className="mr-2" type="checkbox" checked={selectedResults.includes(item.matchId)} disabled={item.alreadyLoaded} onChange={() => toggleResult(item.matchId)}/>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}<span className="ml-2 text-xs text-slate-400">{new Date(item.matchDate).toLocaleDateString()}</span></span>
+            <span className="min-w-0"><input className="mr-2" type="checkbox" checked={selectedResults.includes(item.matchId)} disabled={item.alreadyLoaded} onChange={() => toggleResult(item.matchId)}/>{item.homeTeam} {item.homeScore} - {item.awayScore} {item.awayTeam}{item.decidedByPenalties && item.winnerTeam ? <span className="ml-2 text-xs text-yellow-200">Avanzó {item.winnerTeam} por penales</span> : null}<span className="ml-2 text-xs text-slate-400">{new Date(item.matchDate).toLocaleDateString()}</span></span>
             <strong className={item.alreadyLoaded ? "text-green-300" : "text-blue-300"}>{item.alreadyLoaded ? "Ya cargado" : item.currentScore ? `Actual: ${item.currentScore}` : "Nuevo"}</strong>
           </label>)}
         </div>}
@@ -159,13 +167,18 @@ export const AdminPage = () => {
           <span className="rounded-full bg-blue-500/10 px-3 py-1 text-sm font-bold text-blue-200">{pendingMatches.length} pendientes</span>
         </div>
         <form className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_130px_130px_auto]" onSubmit={saveResult}>
-          <select className="min-w-0" required value={result.matchId} onChange={(event) => setResult({ ...result, matchId: event.target.value })}>
+          <select className="min-w-0" required value={result.matchId} onChange={(event) => setResult({ ...result, matchId: event.target.value, winnerTeam: "" })}>
             <option value="">Seleccionar partido pendiente</option>
             {pendingMatches.map((match) => <option key={match.id} value={match.id}>{new Date(match.matchDate).toLocaleString()} · {match.homeTeam} vs {match.awayTeam}</option>)}
           </select>
           <input required min="0" type="number" placeholder="Goles local" value={result.homeScore} onChange={(event) => setResult({ ...result, homeScore: event.target.value })}/>
           <input required min="0" type="number" placeholder="Goles visitante" value={result.awayScore} onChange={(event) => setResult({ ...result, awayScore: event.target.value })}/>
           <button className="button-primary w-full lg:w-auto">Guardar</button>
+          {needsPenaltyWinner && <select className="lg:col-span-4" required value={result.winnerTeam} onChange={(event) => setResult({ ...result, winnerTeam: event.target.value })}>
+            <option value="">Ganador por penales</option>
+            <option value={selectedManualMatch!.homeTeam}>{selectedManualMatch!.homeTeam}</option>
+            <option value={selectedManualMatch!.awayTeam}>{selectedManualMatch!.awayTeam}</option>
+          </select>}
         </form>
         {!pendingMatches.length && <p className="mt-3 text-sm text-green-300">Todos los partidos cargados tienen resultado.</p>}
       </div>

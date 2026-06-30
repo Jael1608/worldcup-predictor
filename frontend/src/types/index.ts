@@ -4,6 +4,7 @@ export type User = { id: number; name: string; username: string; role: Role };
 export type Prediction = { id: number; predictedHome: number; predictedAway: number; points: number; user?: Pick<User, "id" | "name" | "username"> };
 export type Match = {
   id: number; homeTeam: string; awayTeam: string; homeScore: number | null; awayScore: number | null;
+  winnerTeam?: string | null;
   matchDate: string; stage: Stage; groupName?: string | null; venue?: string | null; status: string;
   myPrediction?: Prediction | null; canPredict?: boolean; predictions?: Prediction[]; predictionsHidden?: boolean;
   predictionDistribution?: PredictionDistribution | null; distributionHidden?: boolean;
@@ -36,6 +37,8 @@ export type ResultPreview = {
   awayTeam: string;
   homeScore: number;
   awayScore: number;
+  winnerTeam: string | null;
+  decidedByPenalties: boolean;
   matchDate: string;
   alreadyLoaded: boolean;
   currentScore: string | null;
@@ -46,6 +49,8 @@ export type UnmatchedResult = {
   awayTeam: string;
   homeScore: number;
   awayScore: number;
+  winnerTeam: string | null;
+  decidedByPenalties: boolean;
   matchDate: string | null;
 };
 export type ResultPreviewResponse = {

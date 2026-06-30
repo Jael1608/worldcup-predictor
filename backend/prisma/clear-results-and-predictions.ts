@@ -11,6 +11,7 @@ async function main() {
       data: {
         homeScore: null,
         awayScore: null,
+        winnerTeam: null,
         status: "SCHEDULED"
       }
     });

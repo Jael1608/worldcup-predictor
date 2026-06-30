@@ -82,6 +82,7 @@ export const getHistory = async () => {
       status: predictionsHidden ? "SCHEDULED" : match.status,
       homeScore: predictionsHidden ? null : match.homeScore,
       awayScore: predictionsHidden ? null : match.awayScore,
+      winnerTeam: predictionsHidden ? null : match.winnerTeam,
       predictions: predictionsHidden ? [] : match.predictions,
       predictionsHidden
     };

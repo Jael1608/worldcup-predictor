@@ -11,6 +11,8 @@ export type ResultPreview = {
   awayTeam: string;
   homeScore: number;
   awayScore: number;
+  winnerTeam: string | null;
+  decidedByPenalties: boolean;
   matchDate: Date;
   alreadyLoaded: boolean;
   currentScore: string | null;
@@ -22,6 +24,8 @@ export type UnmatchedResult = {
   awayTeam: string;
   homeScore: number;
   awayScore: number;
+  winnerTeam: string | null;
+  decidedByPenalties: boolean;
   matchDate: Date | null;
 };
 
@@ -143,7 +147,20 @@ const scoreOf = (value: unknown) => {
   return Number.isInteger(score) && score >= 0 ? score : null;
 };
 
+const scorePairOf = (item: RawResult, homePaths: string[], awayPaths: string[]) => {
+  const home = scoreOf(pick(item, homePaths));
+  const away = scoreOf(pick(item, awayPaths));
+  return home !== null && away !== null ? { home, away } : null;
+};
+
 const statusOf = (item: RawResult) => String(pick(item, ["status", "status.short", "fixture.status.short", "matchStatus", "state"]) ?? "SIN_ESTADO").toUpperCase();
+
+const isPenaltyShootout = (item: RawResult) => {
+  const status = statusOf(item);
+  const duration = String(pick(item, ["score.duration", "duration", "matchDuration"]) ?? "").toUpperCase();
+  const penalties = scorePairOf(item, ["score.penalties.home", "score.penalty.home", "penalties.home"], ["score.penalties.away", "score.penalty.away", "penalties.away"]);
+  return status.includes("PEN") || duration.includes("PEN") || Boolean(penalties);
+};
 
 const isFinal = (item: RawResult) => {
   const status = statusOf(item);
@@ -163,34 +180,64 @@ const resultArray = (payload: unknown): RawResult[] => {
 const normalizeExternalResult = (item: RawResult) => {
   const homeTeam = String(pick(item, ["homeTeam.name", "home.name", "teams.home.name", "teamHome.name", "localTeam.name", "homeTeam"]) ?? "").trim();
   const awayTeam = String(pick(item, ["awayTeam.name", "away.name", "teams.away.name", "teamAway.name", "visitorTeam.name", "awayTeam"]) ?? "").trim();
-  const homeScore = scoreOf(pick(item, ["homeScore", "score.home", "goals.home", "score.fulltime.home", "score.fullTime.home"]));
-  const awayScore = scoreOf(pick(item, ["awayScore", "score.away", "goals.away", "score.fulltime.away", "score.fullTime.away"]));
+  const decidedByPenalties = isPenaltyShootout(item);
+  const regularTime = scorePairOf(item, ["score.regularTime.home", "score.regulartime.home"], ["score.regularTime.away", "score.regulartime.away"]);
+  const fullTime = scorePairOf(item, ["score.fulltime.home", "score.fullTime.home", "homeScore", "score.home", "goals.home"], ["score.fulltime.away", "score.fullTime.away", "awayScore", "score.away", "goals.away"]);
+  const penalties = scorePairOf(item, ["score.penalties.home", "score.penalty.home", "penalties.home"], ["score.penalties.away", "score.penalty.away", "penalties.away"]);
+  const score = decidedByPenalties && regularTime
+    ? regularTime
+    : decidedByPenalties && fullTime && penalties && fullTime.home >= penalties.home && fullTime.away >= penalties.away && fullTime.home - penalties.home === fullTime.away - penalties.away
+      ? { home: fullTime.home - penalties.home, away: fullTime.away - penalties.away }
+      : fullTime;
+  const homeScore = score?.home ?? null;
+  const awayScore = score?.away ?? null;
+  const winnerValue = String(pick(item, ["score.winner", "winner", "winner.name", "teams.winner.name"]) ?? "").trim();
+  const homeWon = pick(item, ["teams.home.winner", "home.winner", "homeTeam.winner"]) === true;
+  const awayWon = pick(item, ["teams.away.winner", "away.winner", "awayTeam.winner"]) === true;
+  const winnerTeam = winnerValue === "HOME_TEAM" || homeWon
+    ? homeTeam
+    : winnerValue === "AWAY_TEAM" || awayWon
+      ? awayTeam
+      : normalizeTeamName(winnerValue) === normalizeTeamName(homeTeam)
+        ? homeTeam
+        : normalizeTeamName(winnerValue) === normalizeTeamName(awayTeam)
+          ? awayTeam
+          : penalties && penalties.home !== penalties.away
+            ? penalties.home > penalties.away ? homeTeam : awayTeam
+            : homeScore !== null && awayScore !== null && homeScore !== awayScore
+              ? homeScore > awayScore ? homeTeam : awayTeam
+              : null;
   const dateValue = pick(item, ["matchDate", "date", "fixture.date", "utcDate"]);
   const matchDate = dateValue ? new Date(String(dateValue)) : null;
   const externalId = pick(item, ["externalId", "id", "matchId", "fixture.id"])?.toString();
 
   if (!homeTeam || !awayTeam || homeScore === null || awayScore === null || !isFinal(item)) return null;
-  return { externalId, homeTeam, awayTeam, homeScore, awayScore, matchDate: matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate : null };
+  return { externalId, homeTeam, awayTeam, homeScore, awayScore, winnerTeam, decidedByPenalties, matchDate: matchDate && !Number.isNaN(matchDate.getTime()) ? matchDate : null };
 };
 
 const sameMatchDate = (candidateDate: Date, resultDate: Date | null) =>
   !resultDate || Math.abs(candidateDate.getTime() - resultDate.getTime()) <= 36 * 60 * 60 * 1000;
 
 const findMatchingPreview = (matches: Awaited<ReturnType<typeof prisma.match.findMany>>, result: NonNullable<ReturnType<typeof normalizeExternalResult>>) => {
+  const winnerFor = (homeTeam: string, awayTeam: string) => {
+    if (normalizeTeamName(result.winnerTeam) === normalizeTeamName(result.homeTeam)) return homeTeam;
+    if (normalizeTeamName(result.winnerTeam) === normalizeTeamName(result.awayTeam)) return awayTeam;
+    return null;
+  };
   const direct = matches.find((candidate) => {
     if (result.externalId && candidate.externalId === result.externalId) return true;
     return normalizeTeamName(candidate.homeTeam) === normalizeTeamName(result.homeTeam)
       && normalizeTeamName(candidate.awayTeam) === normalizeTeamName(result.awayTeam)
       && sameMatchDate(candidate.matchDate, result.matchDate);
   });
-  if (direct) return { match: direct, homeScore: result.homeScore, awayScore: result.awayScore };
+  if (direct) return { match: direct, homeScore: result.homeScore, awayScore: result.awayScore, winnerTeam: winnerFor(direct.homeTeam, direct.awayTeam) };
 
   const reversed = matches.find((candidate) =>
     normalizeTeamName(candidate.homeTeam) === normalizeTeamName(result.awayTeam)
     && normalizeTeamName(candidate.awayTeam) === normalizeTeamName(result.homeTeam)
     && sameMatchDate(candidate.matchDate, result.matchDate)
   );
-  if (reversed) return { match: reversed, homeScore: result.awayScore, awayScore: result.homeScore };
+  if (reversed) return { match: reversed, homeScore: result.awayScore, awayScore: result.homeScore, winnerTeam: winnerFor(reversed.awayTeam, reversed.homeTeam) };
   return null;
 };
 
@@ -231,7 +278,7 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
       unmatchedResults.push(result);
       continue;
     }
-    const { match, homeScore, awayScore } = matchPreview;
+    const { match, homeScore, awayScore, winnerTeam } = matchPreview;
     previews.push({
       matchId: match.id,
       externalId: match.externalId,
@@ -239,9 +286,11 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
       awayTeam: match.awayTeam,
       homeScore,
       awayScore,
+      winnerTeam,
+      decidedByPenalties: result.decidedByPenalties,
       matchDate: match.matchDate,
-      alreadyLoaded: match.status === "FINISHED" && match.homeScore === homeScore && match.awayScore === awayScore,
-      currentScore: match.homeScore !== null && match.awayScore !== null ? `${match.homeScore}-${match.awayScore}` : null
+      alreadyLoaded: match.status === "FINISHED" && match.homeScore === homeScore && match.awayScore === awayScore && (!winnerTeam || match.winnerTeam === winnerTeam),
+      currentScore: match.homeScore !== null && match.awayScore !== null ? `${match.homeScore}-${match.awayScore}${match.winnerTeam ? ` · avanzó ${match.winnerTeam}` : ""}` : null
     });
   }
 
@@ -263,7 +312,7 @@ export const applyExternalResults = async (matchIds?: unknown) => {
   const toApply = selected ? preview.results.filter((result) => selected.has(result.matchId)) : preview.results.filter((result) => !result.alreadyLoaded);
   const applied = [];
   for (const result of toApply) {
-    await saveResult(result.matchId, { homeScore: result.homeScore, awayScore: result.awayScore });
+    await saveResult(result.matchId, { homeScore: result.homeScore, awayScore: result.awayScore, winnerTeam: result.winnerTeam });
     applied.push(result);
   }
   return { applied: applied.length, results: applied };

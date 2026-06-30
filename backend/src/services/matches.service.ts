@@ -33,6 +33,7 @@ const ensureDifferentTeams = (homeTeam: string, awayTeam: string) => {
   if (homeTeam.localeCompare(awayTeam, undefined, { sensitivity: "accent" }) === 0) throw new AppError(400, "Los equipos deben ser diferentes");
 };
 export const hasDefinedTeams = (homeTeam: string, awayTeam: string) => ![homeTeam, awayTeam].some((team) => /^(Primero|Segundo|Mejor tercero|Ganador|Perdedor) /.test(team));
+const knockoutStages = new Set<MatchStage>(["ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"]);
 
 const predictionDistribution = (predictions: Array<{ predictedHome: number; predictedAway: number }>) => {
   const total = predictions.length;
@@ -124,8 +125,20 @@ export const saveResult = async (id: number, body: Record<string, unknown>) => {
   const homeScore = nonNegativeInteger(body.homeScore, "Goles local");
   const awayScore = nonNegativeInteger(body.awayScore, "Goles visitante");
   return prisma.$transaction(async (tx) => {
+    const current = await tx.match.findUnique({ where: { id } });
+    if (!current) throw new AppError(404, "Partido no encontrado");
+
+    let winnerTeam: string | null = null;
+    if (homeScore > awayScore) winnerTeam = current.homeTeam;
+    else if (awayScore > homeScore) winnerTeam = current.awayTeam;
+    else if (knockoutStages.has(current.stage as MatchStage)) {
+      const requestedWinner = typeof body.winnerTeam === "string" ? body.winnerTeam.trim() : "";
+      if (![current.homeTeam, current.awayTeam].includes(requestedWinner)) throw new AppError(400, "Indica qué equipo avanzó por penales");
+      winnerTeam = requestedWinner;
+    }
+
     let match;
-    try { match = await tx.match.update({ where: { id }, data: { homeScore, awayScore, status: "FINISHED" } }); }
+    try { match = await tx.match.update({ where: { id }, data: { homeScore, awayScore, winnerTeam, status: "FINISHED" } }); }
     catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") throw new AppError(404, "Partido no encontrado");
       throw error;

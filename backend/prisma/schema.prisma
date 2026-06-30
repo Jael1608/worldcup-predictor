@@ -26,6 +26,7 @@ model Match {
   awayTeam    String
   homeScore   Int?
   awayScore   Int?
+  winnerTeam  String?
   matchDate   DateTime
   stage       String
   groupName   String?

@@ -161,6 +161,8 @@ const buildGroupRankings = (matches: Match[]) => {
 
 const knockoutWinner = (match: Match) => {
   if (match.status !== "FINISHED" || match.homeScore === null || match.awayScore === null) return null;
+  if (match.winnerTeam === match.homeTeam) return { winner: match.homeTeam, loser: match.awayTeam };
+  if (match.winnerTeam === match.awayTeam) return { winner: match.awayTeam, loser: match.homeTeam };
   if (match.homeScore === match.awayScore) return null;
   return match.homeScore > match.awayScore
     ? { winner: match.homeTeam, loser: match.awayTeam }
