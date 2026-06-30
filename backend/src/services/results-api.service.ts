@@ -41,6 +41,7 @@ export type ResultPreviewResponse = {
 };
 
 const FOOTBALL_DATA_URL = "https://api.football-data.org/v4/competitions/WC/matches?season=2026";
+const knockoutStages = new Set(["ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"]);
 
 const teamAliases = new Map([
   ["Algeria", "Argelia"],
@@ -241,6 +242,13 @@ const findMatchingPreview = (matches: Awaited<ReturnType<typeof prisma.match.fin
   return null;
 };
 
+const needsResultFromApi = (matchPreview: NonNullable<ReturnType<typeof findMatchingPreview>>) => {
+  const { match, winnerTeam } = matchPreview;
+  const hasLoadedScore = match.status === "FINISHED" && match.homeScore !== null && match.awayScore !== null;
+  if (!hasLoadedScore) return true;
+  return knockoutStages.has(match.stage) && match.homeScore === match.awayScore && !match.winnerTeam && Boolean(winnerTeam);
+};
+
 const fetchExternalResults = async () => {
   const url = process.env.RESULTS_API_URL || FOOTBALL_DATA_URL;
   const isFootballData = url.includes("football-data.org");
@@ -278,6 +286,7 @@ export const previewExternalResults = async (): Promise<ResultPreviewResponse> =
       unmatchedResults.push(result);
       continue;
     }
+    if (!needsResultFromApi(matchPreview)) continue;
     const { match, homeScore, awayScore, winnerTeam } = matchPreview;
     previews.push({
       matchId: match.id,

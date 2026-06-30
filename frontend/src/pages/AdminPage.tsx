@@ -91,17 +91,17 @@ export const AdminPage = () => {
     setResultApiMessage("");
     try {
       const { data } = await api.get<ResultPreviewResponse>("/admin/results-preview");
-      const newResults = data.results.filter((item) => !item.alreadyLoaded);
-      setResultPreview(data.results);
+      const newResults = data.results;
+      setResultPreview(newResults);
       setUnmatchedResults(data.unmatchedResults);
       setSelectedResults(newResults.map((item) => item.matchId));
       const statuses = Object.entries(data.statusSummary).map(([status, count]) => `${status}: ${count}`).join(", ");
       const detail = newResults.length
         ? `${newResults.length} resultado(s) nuevo(s) listo(s) para confirmar.`
-        : data.results.length
-          ? "Todos los resultados encontrados ya estaban cargados."
+        : data.externalCount && data.unmatchedCount === data.externalCount
+          ? `La API trajo ${data.externalCount} resultado(s) finalizado(s), pero no coincidieron con el fixture.`
           : data.externalCount
-            ? `La API trajo ${data.externalCount} resultado(s) finalizado(s), pero no coincidieron con el fixture.`
+            ? "No hay resultados nuevos para cargar. Los que encontró ya estaban cargados."
             : data.apiMatchCount
               ? `La API respondió con ${data.apiMatchCount} partido(s), pero ninguno figura finalizado. Estados: ${statuses}.`
               : "La API respondió, pero no devolvió partidos para este torneo.";
