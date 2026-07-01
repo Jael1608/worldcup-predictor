@@ -3,6 +3,7 @@ import { hasDefinedTeams } from "./matches.service";
 import { MatchStage, matchStages } from "../types/domain";
 import { AppError } from "../middlewares/error.middleware";
 import { CHAMPION_BONUS_POINTS, getOfficialChampion } from "./champion.service";
+import { isExactScore, isWinnerHit } from "./scoring.service";
 
 export type Standing = {
   userId: number; name: string; username: string; totalPoints: number;
@@ -26,15 +27,15 @@ export const getStandings = async (stage?: string): Promise<Standing[]> => {
   if (stage && !matchStages.includes(stage as MatchStage)) throw new AppError(400, "Fase inválida");
   const [users, officialChampion] = await Promise.all([prisma.user.findMany({
     where: { role: "PLAYER" },
-    include: { predictions: stage ? { where: { match: { stage } } } : true, championPrediction: true }
+    include: { predictions: stage ? { where: { match: { stage } }, include: { match: true } } : { include: { match: true } }, championPrediction: true }
   }), getOfficialChampion()]);
   return users.map((user) => ({
     userId: user.id,
     name: user.name,
     username: user.username,
     totalPoints: user.predictions.reduce((total, prediction) => total + prediction.points, 0) + (!stage && user.championPrediction?.team === officialChampion.team ? CHAMPION_BONUS_POINTS : 0),
-    exactScores: user.predictions.filter((prediction) => prediction.points === 3).length,
-    winnerHits: user.predictions.filter((prediction) => prediction.points === 1).length,
+    exactScores: user.predictions.filter((prediction) => prediction.match.status === "FINISHED" && prediction.match.homeScore !== null && prediction.match.awayScore !== null && isExactScore(prediction.predictedHome, prediction.predictedAway, prediction.match.homeScore, prediction.match.awayScore)).length,
+    winnerHits: user.predictions.filter((prediction) => prediction.match.status === "FINISHED" && prediction.match.homeScore !== null && prediction.match.awayScore !== null && isWinnerHit(prediction.predictedHome, prediction.predictedAway, prediction.match.homeScore, prediction.match.awayScore)).length,
     predictionsCount: user.predictions.length,
     championBonus: !stage && user.championPrediction?.team === officialChampion.team ? CHAMPION_BONUS_POINTS : 0
   })).sort((a, b) => b.totalPoints - a.totalPoints || b.exactScores - a.exactScores || b.winnerHits - a.winnerHits || a.name.localeCompare(b.name));
@@ -134,8 +135,8 @@ export const getRankingHistory = async () => {
       const total = totals.get(prediction.userId);
       if (!total) continue;
       total.totalPoints += prediction.points;
-      if (prediction.points === 3) total.exactScores++;
-      if (prediction.points === 1) total.winnerHits++;
+      if (isExactScore(prediction.predictedHome, prediction.predictedAway, match.homeScore!, match.awayScore!)) total.exactScores++;
+      if (isWinnerHit(prediction.predictedHome, prediction.predictedAway, match.homeScore!, match.awayScore!)) total.winnerHits++;
     }
     const ranking = [...totals.values()].sort((a, b) =>
       b.totalPoints - a.totalPoints

@@ -146,7 +146,7 @@ export const saveResult = async (id: number, body: Record<string, unknown>) => {
     const predictions = await tx.prediction.findMany({ where: { matchId: id } });
     await Promise.all(predictions.map((prediction) => tx.prediction.update({
       where: { id: prediction.id },
-      data: { points: calculatePoints(prediction.predictedHome, prediction.predictedAway, homeScore, awayScore) }
+      data: { points: calculatePoints(prediction.predictedHome, prediction.predictedAway, homeScore, awayScore, match.stage, match.winnerTeam, prediction.predictedPenaltyWinner) }
     })));
     await syncKnockoutBracket(tx);
     return match;
@@ -167,7 +167,7 @@ export const recalculateAll = async () => {
   await prisma.$transaction(async (tx) => {
     for (const match of matches) {
       for (const prediction of match.predictions) {
-        await tx.prediction.update({ where: { id: prediction.id }, data: { points: calculatePoints(prediction.predictedHome, prediction.predictedAway, match.homeScore!, match.awayScore!) } });
+        await tx.prediction.update({ where: { id: prediction.id }, data: { points: calculatePoints(prediction.predictedHome, prediction.predictedAway, match.homeScore!, match.awayScore!, match.stage, match.winnerTeam, prediction.predictedPenaltyWinner) } });
         updated++;
       }
     }
